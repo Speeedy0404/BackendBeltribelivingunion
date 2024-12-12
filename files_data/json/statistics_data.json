@@ -1,0 +1,166 @@
+{
+    "aggregated_data": {
+        "lak_one": {
+            "avg_u305": 6137.0583956031105,
+            "count_u305": 855150,
+            "avg_j305kg": 232.1486035941051,
+            "avg_b305kg": 208.00530680734454,
+            "fat_percentage": 3.7802107353940704,
+            "protein_percentage": 3.348835049452445
+        },
+        "lak_two": {
+            "avg_u305": 6372.354321283217,
+            "count_u305": 522125,
+            "avg_j305kg": 241.1394689654511,
+            "avg_b305kg": 216.1695500293575,
+            "fat_percentage": 3.782160269236396,
+            "protein_percentage": 3.352864160908938
+        },
+        "lak_three": {
+            "avg_u305": 6241.8328694985,
+            "count_u305": 286740,
+            "avg_j305kg": 236.66750733547576,
+            "avg_b305kg": 211.64777696004157,
+            "fat_percentage": 3.7894594171410376,
+            "protein_percentage": 3.3496553028520872
+        },
+        "milk": {
+            "count_ebv_milk": 716918,
+            "avg_ebv_milk": 90.3924922405715,
+            "min_ebv_milk": -1273.1359870457413,
+            "max_ebv_milk": 1260.1764014042587,
+            "stddev_ebv_milk": 173.41278053030643,
+            "count_ebv_fkg": 716918,
+            "avg_ebv_fkg": 3.582445255014175,
+            "min_ebv_fkg": -38.84255276793585,
+            "max_ebv_fkg": 55.23546345206415,
+            "stddev_ebv_fkg": 6.620969841510904,
+            "count_ebv_fprc": 716918,
+            "avg_ebv_fprc": 0.001467865852040896,
+            "min_ebv_fprc": -0.16108693344535435,
+            "max_ebv_fprc": 0.21165855655464563,
+            "stddev_ebv_fprc": 0.024317774588319664,
+            "count_ebv_pkg": 716918,
+            "avg_ebv_pkg": 3.0249221017861996,
+            "min_ebv_pkg": -37.446898271477984,
+            "max_ebv_pkg": 40.495275198522016,
+            "stddev_ebv_pkg": 5.642656994103471,
+            "count_ebv_pprc": 716918,
+            "avg_ebv_pprc": 2.836595955889734e-05,
+            "min_ebv_pprc": -0.17880442023437124,
+            "max_ebv_pprc": 0.19071920976562876,
+            "stddev_ebv_pprc": 0.012263110737395097,
+            "count_rbv_milk": 716918,
+            "avg_rbv_milk": 105.20665124881786,
+            "min_rbv_milk": 19.0,
+            "max_rbv_milk": 179.0,
+            "stddev_rbv_milk": 10.951600195325362,
+            "count_rbv_fprc": 716918,
+            "avg_rbv_fprc": 101.14652024359829,
+            "min_rbv_fprc": 16.0,
+            "max_rbv_fprc": 211.0,
+            "stddev_rbv_fprc": 12.737673859001138,
+            "count_rbv_pprc": 716918,
+            "avg_rbv_pprc": 100.17894515132832,
+            "min_rbv_pprc": -57.0,
+            "max_rbv_pprc": 268.0,
+            "stddev_rbv_pprc": 10.805973047887623,
+            "count_rm": 716918,
+            "avg_rm": 105.49036709916615,
+            "min_rm": 29,
+            "max_rm": 182,
+            "stddev_rm": 10.939796368381328
+        },
+        "median_milk": {
+            "median_ebv_milk": 74.23956161425863,
+            "median_ebv_fkg": 2.9483188420641513,
+            "median_ebv_fprc": 0.0002823615546456525,
+            "median_ebv_pkg": 2.4983811135220138,
+            "median_ebv_pprc": -6.345523437123118e-05,
+            "median_rbv_milk": 104.0,
+            "median_rbv_fprc": 101.0,
+            "median_rbv_pprc": 100.0,
+            "median_rm": 104.0
+        },
+        "conf": {
+            "count_rbvt": 90170,
+            "avg_rbvt": 101.30543417988244,
+            "min_rbvt": -27,
+            "max_rbvt": 135,
+            "stddev_rbvt": 11.358231198630257,
+            "count_rbvf": 90170,
+            "avg_rbvf": 98.89762670511257,
+            "min_rbvf": -18,
+            "max_rbvf": 140,
+            "stddev_rbvf": 11.4837715931919,
+            "count_rbvu": 90170,
+            "avg_rbvu": 99.62439835865587,
+            "min_rbvu": -15,
+            "max_rbvu": 183,
+            "stddev_rbvu": 11.91919446391561,
+            "count_rc": 90170,
+            "avg_rc": 100.04500388155707,
+            "min_rc": -48,
+            "max_rc": 161,
+            "stddev_rc": 11.785682453909393
+        },
+        "median_conf": {
+            "median_rbvt": 102.0,
+            "median_rbvf": 101.0,
+            "median_rbvu": 101.0,
+            "median_rc": 101.0
+        },
+        "reprod": {
+            "count_rbv_crh": 366172,
+            "avg_rbv_crh": 103.09337415203784,
+            "min_rbv_crh": 53,
+            "max_rbv_crh": 187,
+            "stddev_rbv_crh": 14.05200853990137,
+            "count_rbv_ctfi": 366172,
+            "avg_rbv_ctfi": 98.0492091148422,
+            "min_rbv_ctfi": 37,
+            "max_rbv_ctfi": 150,
+            "stddev_rbv_ctfi": 10.34182556784454,
+            "count_rbv_do": 366172,
+            "avg_rbv_do": 96.370708301017,
+            "min_rbv_do": 43,
+            "max_rbv_do": 142,
+            "stddev_rbv_do": 11.142845471790167,
+            "count_rf": 366172,
+            "avg_rf": 102.39515036649443,
+            "min_rf": 52,
+            "max_rf": 186,
+            "stddev_rf": 13.649774823034404
+        },
+        "reprod_median": {
+            "median_rbv_crh": 102.0,
+            "median_rbv_ctfi": 99.0,
+            "median_rbv_do": 98.0,
+            "median_rf": 101.0
+        },
+        "scs": {
+            "count_scs": 328557,
+            "avg_scs": 3.7180576734016095,
+            "min_scs": 1.678,
+            "max_scs": 9.751,
+            "stddev_scs": 1.070137549950162
+        },
+        "median_scs": {
+            "median_scs": 3.614
+        },
+        "com": {
+            "count_pi": 34210,
+            "avg_pi": 106.19657994738381,
+            "min_pi": 53,
+            "max_pi": 161,
+            "stddev_pi": 11.342612882122069
+        },
+        "median_com": {
+            "median_pi": 106.0
+        }
+    },
+    "info": {
+        "count": "1.400.875",
+        "in_assessment": "716.918"
+    }
+}
