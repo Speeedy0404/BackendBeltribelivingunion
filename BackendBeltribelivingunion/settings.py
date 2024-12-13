@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 
 from pathlib import Path
-
+import dj_database_url
 from corsheaders.defaults import default_headers
 from dotenv import load_dotenv
 
@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-9$s1q#$33h*2805t2_zg9e12ompv*)mnk^&3_ceh#dugmm94#s'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*', '3ab4-134-17-210-46.ngrok-free.app', '746b-134-17-210-46.ngrok-free.app']
 
@@ -120,7 +120,9 @@ DATABASES = {
         'PORT': '5432',
     }
 }
+DATABASES['default']=dj_database_url.parse("postgresql://cow_database_user:8alafEu2kxlyEQgO3cyFXpVD6Q8Ghk88@dpg-ctduvo3tq21c73fulat0-a.oregon-postgres.render.com/cow_database")
 
+# postgresql://cow_database_user:8alafEu2kxlyEQgO3cyFXpVD6Q8Ghk88@dpg-ctduvo3tq21c73fulat0-a.oregon-postgres.render.com/cow_database
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
