@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-9$s1q#$33h*2805t2_zg9e12ompv*)mnk^&3_ceh#dugmm94#s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*', '3ab4-134-17-210-46.ngrok-free.app', '746b-134-17-210-46.ngrok-free.app']
+ALLOWED_HOSTS = ['*', 'backendbeltribelivingunion.onrender.com', '127.0.0.1', 'localhost']
 
 REST_FRAMEWORK = {
     # 'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
@@ -120,7 +120,8 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-DATABASES['default']=dj_database_url.parse("postgresql://cow_database_user:8alafEu2kxlyEQgO3cyFXpVD6Q8Ghk88@dpg-ctduvo3tq21c73fulat0-a.oregon-postgres.render.com/cow_database")
+DATABASES['default'] = dj_database_url.parse(
+    "postgresql://cow_database_user:8alafEu2kxlyEQgO3cyFXpVD6Q8Ghk88@dpg-ctduvo3tq21c73fulat0-a.oregon-postgres.render.com/cow_database")
 
 # postgresql://cow_database_user:8alafEu2kxlyEQgO3cyFXpVD6Q8Ghk88@dpg-ctduvo3tq21c73fulat0-a.oregon-postgres.render.com/cow_database
 # Password validation
@@ -176,6 +177,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOWED_ORIGINS = [
     'https://746b-134-17-210-46.ngrok-free.app',  # React URL
+    "https://frontend-w5ng.onrender.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
