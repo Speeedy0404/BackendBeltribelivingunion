@@ -93,25 +93,30 @@ class IndividualCowView(APIView):
             if data.get('maxPI'):
                 cow_filter &= Q(complexindex__pi__lte=data['maxPI'])
 
-            if data.get('selectedComplex') or data.get('selectedLine'):
-                if data.get('selectedComplex') and data.get('selectedLine'):
-                    bull_keys = PKBull.objects.filter(
-                        kompleks__in=data['selectedComplex'], lin__branch_name=data['selectedLine'],
-                    ).values('uniq_key')
-                elif data.get('selectedComplex'):
-                    bull_keys = PKBull.objects.filter(
-                        kompleks__in=data['selectedComplex'],
-                    ).values('uniq_key')
-                else:
-                    bull_keys = PKBull.objects.filter(
-                        lin__branch_name=data['selectedLine']
-                    ).values('uniq_key')
+            # if data.get('selectedComplex') or data.get('selectedLine'):
+            #     if data.get('selectedComplex') and data.get('selectedLine'):
+            #         bull_keys = PKBull.objects.filter(
+            #             kompleks__in=data['selectedComplex'], lin__branch_name=data['selectedLine'],
+            #         ).values('uniq_key')
+            #     elif data.get('selectedComplex'):
+            #         bull_keys = PKBull.objects.filter(
+            #             kompleks__in=data['selectedComplex'],
+            #         ).values('uniq_key')
+            #     else:
+            #         bull_keys = PKBull.objects.filter(
+            #             lin__branch_name=data['selectedLine']
+            #         ).values('uniq_key')
+            #
+            #     cow_filter &= Q(uniq_key__in=Subquery(
+            #         Parentage.objects.filter(
+            #             ukeyo__in=bull_keys
+            #         ).values('uniq_key')
+            #     ))
 
-                cow_filter &= Q(uniq_key__in=Subquery(
-                    Parentage.objects.filter(
-                        ukeyo__in=bull_keys
-                    ).values('uniq_key')
-                ))
+            if data.get('selectedComplex'):
+                cow_filter &= Q(kompleks__in=data['selectedComplex'])
+            if data.get('selectedLine'):
+                cow_filter &= Q(lin__branch_name=data['selectedLine'])
 
             cow = list(PK.objects.filter(cow_filter).values_list('uniq_key', flat=True))
 

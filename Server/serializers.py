@@ -11,7 +11,7 @@ from collections import defaultdict
 class FarmsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Farms
-        fields = ['korg', 'norg', ]
+        fields = ['korg', 'norg']
 
 
 class BookBranchesSerializer(serializers.ModelSerializer):

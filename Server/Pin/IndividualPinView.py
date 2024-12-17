@@ -112,17 +112,16 @@ class IndividualPinView(APIView):
                 farm = Farms.objects.get(korg=farm_code, norg=farm_name)
 
                 cow_ids = PK.objects.filter(kodxoz=farm.korg, datavybr__isnull=True).values_list('id', flat=True)
-                data = {'cow_ids': list(cow_ids)}
+                # data = {'cow_ids': list(cow_ids)}
 
-                aggregated_serializer = AggregatedDataSerializer(data=data)
-                aggregated_serializer.is_valid(raise_exception=True)
-                aggregated_data = aggregated_serializer.data
-
-                density_data = create_data(cow_ids)
+                # aggregated_serializer = AggregatedDataSerializer(data=data)
+                # aggregated_serializer.is_valid(raise_exception=True)
+                # aggregated_data = aggregated_serializer.data
+                # density_data = create_data(cow_ids)
 
                 result_data = {
-                    'aggregated_data': aggregated_data,
-                    'density_data': density_data,
+                    'aggregated_data': farm.aggregated_data["aggregated_data"],
+                    'density_data': farm.chart_data["char_data"],
                 }
 
                 return Response(result_data, status=status.HTTP_200_OK)

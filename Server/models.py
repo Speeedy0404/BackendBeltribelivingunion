@@ -18,6 +18,11 @@ class PK(models.Model):
     prichvybr = models.IntegerField(verbose_name='prichvybr', null=True, blank=True)
     consolidation = models.BooleanField(verbose_name='consolidation', default=False)
 
+    kompleks = models.IntegerField(verbose_name='kompleks', null=True, blank=True)
+    lin = models.ForeignKey('BookBranches', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='lin')
+    por = models.IntegerField(verbose_name='por', null=True, blank=True)
+    vet = models.IntegerField(verbose_name='vet', null=True, blank=True)
+
     def __str__(self):
         return f'{self.nomer} - {self.uniq_key}'
 
@@ -491,6 +496,8 @@ class Farms(models.Model):
     kter = models.IntegerField(verbose_name='kter', null=True, blank=True)
     area = models.CharField(max_length=20, verbose_name='area', null=True, blank=True)
     region = models.CharField(max_length=20, verbose_name='region', null=True, blank=True)
+    aggregated_data = models.JSONField(verbose_name='Aggregated Data', null=True, blank=True)
+    chart_data = models.JSONField(verbose_name='Chart Data', null=True, blank=True)
 
 
 class BookBranches(models.Model):
