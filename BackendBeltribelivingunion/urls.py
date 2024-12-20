@@ -16,7 +16,7 @@ from Server.Animal.FindCowAnimalListView import *
 from Server.Animal.GetInfoView import *
 from Server.Animal.GetInfoCowView import *
 
-from Server.Report.PdfReportView import *
+from Server.Report.ReportView import *
 from Server.Report.FarmsReportListView import *
 from Server.Report.FarmReportsView import *
 
@@ -45,7 +45,7 @@ urlpatterns = [
     path('api/v1/submit-consolidation/', ConsolidationView.as_view(), name='submit-consolidation'),
 
     # API для получения отчета о закреплении по имени
-    path('api/v1/get-pdf-report/<str:filename>/', PdfReportView.as_view(), name='submit-consolidation'),
+    path('api/v1/get-report/<str:filename>/', ReportView.as_view(), name='submit-consolidation'),
 
     # API для общей статистике по всем хоз
     path('api/v1/statistics/', StatisticsListView.as_view(), name='statistics-list'),

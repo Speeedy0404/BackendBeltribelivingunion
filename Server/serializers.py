@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import User, PKBull, PK, Farms, ComplexIndex, Scs, ReproductionIndex, ConformationIndex, \
     MilkProductionIndex, ReproductionIndexBull, ConformationIndexBull, MilkProductionIndexBull, ComplexIndexBull, \
     SomaticCellIndex, SomaticCellIndexBull, LAK, Parentage, ConformationIndexDiagramBull, PKYoungAnimals, BookBranches, \
-    BookBreeds
+    BookBreeds, Report
 from django.db.models import Avg, Count, Max, Min, StdDev, Q, Sum
 import numpy as np
 from collections import defaultdict
@@ -545,7 +545,7 @@ class BullIndividualSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PKBull
-        fields = ['id', 'datarojd', 'uniq_key', 'nomer','kompleks', 'milkproductionindexbull', 'conformationindexbull',
+        fields = ['id', 'datarojd', 'uniq_key', 'nomer', 'kompleks', 'milkproductionindexbull', 'conformationindexbull',
                   'reproductionindexbull', 'complexindexbull', 'sperma']
 
 
@@ -694,3 +694,14 @@ class CowIndividualAvgSerializer(serializers.Serializer):
             'reprod': reprod,
             'com': com,
         }
+
+
+class ReportSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Report
+        fields = ['title', 'path', 'created_at', 'user_name']
+
+    def get_user_name(self, obj):
+        return obj.user.username

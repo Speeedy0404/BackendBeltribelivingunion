@@ -225,9 +225,11 @@ def add_date_cow_table():
         process.join()
 
 
-def add_json_data_for_farms():
-    farms = Farms.objects.all()
-    for farm in farms:
+def json_data_for_farms(batch):
+    data_batch = []
+
+    for farm in batch:
+        field_values = {}
         cow_ids = PK.objects.filter(datavybr__isnull=True, kodxoz=farm.korg).values_list('id', flat=True)
         data = {'cow_ids': list(cow_ids)}
 
@@ -235,31 +237,65 @@ def add_json_data_for_farms():
         aggregated_serializer.is_valid(raise_exception=True)
         aggregated_data = aggregated_serializer.data
 
-        cows_with_milkproduction = PK.objects.filter(
-            datavybr__isnull=True, kodxoz=farm.korg
-        ).annotate(
-            milk_count=Count('milkproductionindex')
-        ).filter(
-            milk_count__gt=0
-        )
-
         result_data = {
             'aggregated_data': aggregated_data,
-            'info': {
-                'count': "{:,.0f}".format(len(cow_ids)).replace(",", "."),
-                'in_assessment': "{:,.0f}".format(cows_with_milkproduction.count()).replace(",", ".")
-            }
         }
 
-        farm.aggregated_data = result_data
-        farm.save()
+        field_values['pk_farm'] = farm
+        field_values['aggregated_data'] = result_data
+        data_batch.append(JsonFarmsData(**field_values))
+
+        if len(data_batch) > 10:
+            if data_batch:
+                with transaction.atomic():
+                    JsonFarmsData.objects.bulk_create(data_batch)
+            data_batch = []
+
+    if data_batch:
+        with transaction.atomic():
+            JsonFarmsData.objects.bulk_create(data_batch)
+
+
+def process_chunk_json_aggregated_data(farm_batch):
+    process = Process(target=json_data_for_farms,
+                      args=(farm_batch,))
+    process.start()
+    return process
+
+
+def add_json_aggregated_data_for_farms():
+    batch_size = 450
+    processes = []
+    farms = Farms.objects.all()
+    farms_batches = [farms[i:i + batch_size] for i in range(0, len(farms), batch_size)]
+
+    for farm_batch in farms_batches:
+        process = process_chunk_json_aggregated_data(farm_batch)
+        processes.append(process)
+
+    for process in processes:
+        process.join()
 
 
 def get_density(object_with_data):
-    density_data = gaussian_kde(object_with_data)
-    x = np.linspace(min(object_with_data), max(object_with_data), 1000).tolist()
-    y = density_data(x).tolist()
-    return x, y
+    if not object_with_data or len(object_with_data) < 2:
+        return [], []
+
+    # Проверяем уникальные значения
+    unique_values = np.unique(object_with_data)
+    if len(unique_values) < 2:
+        # Если данные одномерны или имеют только одну уникальную точку
+        return [], []
+
+    try:
+        density_data = gaussian_kde(object_with_data)
+        x = np.linspace(min(object_with_data), max(object_with_data), 1000).tolist()
+        y = density_data(x).tolist()
+        return x, y
+    except np.linalg.LinAlgError as e:
+        # Обработка исключения, если матрица ковариации вырождена
+        print(f"Ошибка KDE: {e}")
+        return [], []
 
 
 def get_count(object_with_data):
@@ -271,37 +307,21 @@ def get_count(object_with_data):
     return x, y
 
 
-def create_data():
-    farms = Farms.objects.all()
-    for farm in farms:
+def create_json_char_data(farm_batch):
+    data_batch = []
+
+    for farm in farm_batch:
         cow_ids = PK.objects.filter(datavybr__isnull=True, kodxoz=farm.korg).values_list('id', flat=True)
 
         data = PK.objects.filter(id__in=cow_ids).select_related(
-            'milkproductionindex',
-            'conformationindex',
-            'reproductionindex',
-            'scs',
-            'complexindex'
+            'milkproductionindex', 'conformationindex', 'reproductionindex', 'scs', 'complexindex'
         ).values_list(
-            'milkproductionindex__ebv_milk',
-            'milkproductionindex__ebv_fkg',
-            'milkproductionindex__ebv_fprc',
-            'milkproductionindex__ebv_pkg',
-            'milkproductionindex__ebv_pprc',
-            'milkproductionindex__rbv_milk',
-            'milkproductionindex__rbv_fprc',
-            'milkproductionindex__rbv_pprc',
-            'milkproductionindex__rm',
-            'conformationindex__rbvt',
-            'conformationindex__rbvf',
-            'conformationindex__rbvu',
-            'conformationindex__rc',
-            'reproductionindex__rbv_crh',
-            'reproductionindex__rbv_ctfi',
-            'reproductionindex__rbv_do',
-            'reproductionindex__rf',
-            'scs__scs',
-            'complexindex__pi'
+            'milkproductionindex__ebv_milk', 'milkproductionindex__ebv_fkg', 'milkproductionindex__ebv_fprc',
+            'milkproductionindex__ebv_pkg', 'milkproductionindex__ebv_pprc', 'milkproductionindex__rbv_milk',
+            'milkproductionindex__rbv_fprc', 'milkproductionindex__rbv_pprc', 'milkproductionindex__rm',
+            'conformationindex__rbvt', 'conformationindex__rbvf', 'conformationindex__rbvu', 'conformationindex__rc',
+            'reproductionindex__rbv_crh', 'reproductionindex__rbv_ctfi', 'reproductionindex__rbv_do',
+            'reproductionindex__rf', 'scs__scs', 'complexindex__pi'
         )
 
         results = []
@@ -348,8 +368,40 @@ def create_data():
             'char_data': results
         }
 
-        farm.chart_data = data
-        farm.save()
+        json_data = JsonFarmsData.objects.get(pk_farm=farm)
+        json_data.chart_data = data
+        data_batch.append(json_data)
+
+        if len(data_batch) > 10:
+            if data_batch:
+                with transaction.atomic():
+                    JsonFarmsData.objects.bulk_update(data_batch, ['chart_data', ])
+            data_batch = []
+
+    if data_batch:
+        with transaction.atomic():
+            JsonFarmsData.objects.bulk_update(data_batch, ['chart_data', ])
+
+
+def process_chunk_json_char_data(farm_batch):
+    process = Process(target=create_json_char_data,
+                      args=(farm_batch,))
+    process.start()
+    return process
+
+
+def add_json_char_data_for_farms():
+    batch_size = 450
+    processes = []
+    farms = Farms.objects.all()
+    farms_batches = [farms[i:i + batch_size] for i in range(0, len(farms), batch_size)]
+
+    for farm_batch in farms_batches:
+        process = process_chunk_json_char_data(farm_batch)
+        processes.append(process)
+
+    for process in processes:
+        process.join()
 
 
 if __name__ == '__main__':
@@ -375,13 +427,16 @@ if __name__ == '__main__':
     print(f"Добавление необходимых данных коровам  за {end_time - start_time:.2f} секунд.")
 
     start_time = time.time()
-    add_json_data_for_farms()
+    add_json_aggregated_data_for_farms()
     end_time = time.time()
     print(f"Добавление агрегированых данных для хозяйств {end_time - start_time:.2f} секунд.")
 
     start_time = time.time()
-    create_data()
+    add_json_char_data_for_farms()
     end_time = time.time()
     print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
 
-
+    # cow = PK.objects.filter(consolidation=True)
+    # for c in cow:
+    #     c.consolidation = False
+    #     c.save()

@@ -5,7 +5,7 @@ from transliterate import translit
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
-PDF_DIR = os.path.join(settings.BASE_DIR, 'pdf_reports')
+REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
 
 
 def reverse_sanitize_filename(name):
@@ -24,7 +24,7 @@ class FarmsReportListView(APIView):
         for_user_understand = []
         try:
             # Получаем список всех директорий (хозяйств)
-            farms = next(os.walk(PDF_DIR))[1]
+            farms = next(os.walk(REPORT_DIR))[1]
             for farm in farms:
                 for_user_understand.append(reverse_sanitize_filename(farm))
             return Response({"farms": for_user_understand}, status=status.HTTP_200_OK)

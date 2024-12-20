@@ -7,7 +7,7 @@ from transliterate import translit
 from collections import defaultdict
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..models import Farms, PK, PKYoungAnimals, Parentage
+from ..models import Farms, PK, PKYoungAnimals, Parentage, PKBull, Report
 
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -16,7 +16,10 @@ from reportlab.pdfbase.ttfonts import TTFont, pdfmetrics
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image, Spacer, KeepTogether
 
-PDF_DIR = os.path.join(settings.BASE_DIR, 'pdf_reports')
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, Border, Side, PatternFill
+
+REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
 ICON_PATH = os.path.join(settings.BASE_DIR, 'image\\dna.png')
 FONT_PATH = os.path.join(settings.BASE_DIR, 'text\\DejaVuSans.ttf')
 FONT_BOLD_PATH = os.path.join(settings.BASE_DIR, 'text\\DejaVuSans-Bold.ttf')
@@ -127,34 +130,32 @@ def sanitize_filename(name):
     return name
 
 
-def get_unique_pdf_filename(base_name):
+def get_unique_filename(base_name, type_file):
     """Создание уникального имени файла с добавлением текущей даты и времени. Создание директории, если ее нет."""
-    directory_path = os.path.join(PDF_DIR, f'{base_name}')
+    directory_path = os.path.join(REPORT_DIR, f'{base_name}')
 
     if not os.path.isdir(directory_path):
         os.mkdir(directory_path)
 
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    pdf_path = os.path.join(directory_path, f'{base_name}_{current_time}.pdf')
+    report_path = os.path.join(directory_path, f'{base_name}_{current_time}.{type_file}')
 
-    return pdf_path
+    return report_path
 
 
 def create_pdf_report(cows, bulls, name_pdf, user_name=None):
     """Создание PDF отчета о закреплении коров за быками."""
     try:
-        if not os.path.exists(PDF_DIR):
-            os.makedirs(PDF_DIR)
+        if not os.path.exists(REPORT_DIR):
+            os.makedirs(REPORT_DIR)
 
         sanitized_name = sanitize_filename(name_pdf)
-        pdf_path = get_unique_pdf_filename(sanitized_name)
+        pdf_path = get_unique_filename(sanitized_name, 'pdf')
 
         if user_name is not None:
             user_name = sanitize_filename(user_name)
             pdf_path = pdf_path[:-4] + '__' + user_name + pdf_path[-4:]
-
-        print(pdf_path)
 
         pdfmetrics.registerFont(TTFont('DejaVu', FONT_PATH))
         pdfmetrics.registerFont(TTFont('DejaVu-Bold', FONT_BOLD_PATH))
@@ -273,11 +274,105 @@ def create_pdf_report(cows, bulls, name_pdf, user_name=None):
         raise
 
 
+def create_xlsx_report(cows, bulls, name_xlsx, user_name=None):
+    try:
+        if not os.path.exists(REPORT_DIR):
+            os.makedirs(REPORT_DIR)
+
+        sanitized_name = sanitize_filename(name_xlsx)
+        xlsx_path = get_unique_filename(sanitized_name, 'xlsx')
+
+        if user_name is not None:
+            user_name = sanitize_filename(user_name)
+            xlsx_path = xlsx_path[:-5] + '__' + user_name + xlsx_path[-5:]
+
+        bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka')
+        cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', )
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Закрепление"
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'),
+                             bottom=Side(style='thin'))
+
+        # Установка жирной границы для серой разделительной линии
+        thick_border = Border(left=Side(style='thick'), right=Side(style='thick'), top=Side(style='thick'),
+                              bottom=Side(style='thick'))
+
+        ws.merge_cells('A1:E2')
+        ws['A1'] = name_xlsx
+        ws['A1'].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws['A1'].font = Font(bold=True)
+
+        ws['A3'] = 'Коровы'
+        ws['A3'].alignment = Alignment(horizontal="center", vertical="center")
+
+        ws.merge_cells('C3:E3')
+        ws['C3'] = 'Быки'
+        ws['C3'].alignment = Alignment(horizontal="center", vertical="center")
+
+        ws['A4'] = 'Индивидуальный номер'
+        ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['C4'] = 'Рабочий номер'
+        ws['C4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['D4'] = 'Индивидуальный номер'
+        ws['D4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['E4'] = 'Кличка'
+        ws['E4'].alignment = Alignment(horizontal="center", vertical="center")
+
+        for row in ws['A1:E2']:
+            for cell in row:
+                cell.border = thick_border
+        for row in ws['C3:E3']:
+            for cell in row:
+                cell.border = thick_border
+        for row in ws['C4:E4']:
+            for cell in row:
+                cell.border = thick_border
+
+        ws['A3'].border = thick_border
+        ws['A4'].border = thick_border
+
+        # Установка ширины столбцов
+        ws.column_dimensions['A'].width = 30
+        ws.column_dimensions['B'].width = 30
+        ws.column_dimensions['C'].width = 30
+        ws.column_dimensions['D'].width = 30
+        ws.column_dimensions['E'].width = 30
+
+        row_start = 5
+
+        for row_num, row_data in enumerate(cows, start=row_start):
+            cell = ws.cell(row=row_num, column=1, value=row_data[0])
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")  # Добавляем выравнивание
+
+        for row_num, row_data in enumerate(bulls_date, start=row_start):
+            cell = ws.cell(row=row_num, column=3, value=row_data[0])
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            cell = ws.cell(row=row_num, column=4, value=row_data[1])
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            cell = ws.cell(row=row_num, column=5, value=row_data[2])
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        wb.save(xlsx_path)
+
+        return xlsx_path
+    except Exception as e:
+        print(f"Ошибка при создании xlsx отчета: {e}")
+        raise
+
+
 class ConsolidationView(APIView):
 
     def post(self, request):
         data = request.data
         user_name = data['name']
+        user = request.user  # Получаем текущего пользователя из токена
         cows = data['cows']
         bulls = data['bulls']
         mode = data['mode']
@@ -295,8 +390,27 @@ class ConsolidationView(APIView):
                     perform_consolidation(cows, mode)
                     if user_name:
                         pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
+                        create_xlsx_report(cows, bulls, name_pdf, user_name)
+                        path = pdf_file_path.replace('.pdf', '')
+                        path = os.path.basename(path)
+                        Report.objects.create(
+                            title=f"{name_pdf} ({user_name})",
+                            user=user,
+                            path=path,
+                        )
+
                     else:
                         pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
+                        create_xlsx_report(cows, bulls, name_pdf)
+
+                        path = pdf_file_path.replace('.pdf', '')
+                        path = os.path.basename(path)
+                        Report.objects.create(
+                            title=f"{name_pdf} ({user_name})",
+                            user=user,
+                            path=path,
+                        )
+
                     return Response({
                         "inbreeding_check": True,
                         "pdf_filename": os.path.basename(pdf_file_path)  # Имя PDF файла для фронтенда
@@ -310,8 +424,28 @@ class ConsolidationView(APIView):
                 perform_consolidation(cows, mode)
                 if user_name:
                     pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
+                    create_xlsx_report(cows, bulls, name_pdf, user_name)
+
+                    path = pdf_file_path.replace('.pdf', '')
+                    path = os.path.basename(path)
+                    Report.objects.create(
+                        title=f"{name_pdf} ({user_name})",
+                        user=user,
+                        path=path,
+                    )
+
                 else:
                     pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
+                    create_xlsx_report(cows, bulls, name_pdf)
+
+                    path = pdf_file_path.replace('.pdf', '')
+                    path = os.path.basename(path)
+                    Report.objects.create(
+                        title=f"{name_pdf} ({user_name})",
+                        user=user,
+                        path=path,
+                    )
+
                 return Response({
                     "inbreeding_check": True,
                     "pdf_filename": os.path.basename(pdf_file_path)
@@ -323,8 +457,28 @@ class ConsolidationView(APIView):
                 perform_consolidation(filtered_cows, mode)
                 if user_name:
                     pdf_file_path = create_pdf_report(filtered_cows, bulls, name_pdf, user_name)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf, user_name)
+
+                    path = pdf_file_path.replace('.pdf', '')
+                    path = os.path.basename(path)
+                    Report.objects.create(
+                        title=f"{name_pdf} ({user_name})",
+                        user=user,
+                        path=path,
+                    )
+
                 else:
                     pdf_file_path = create_pdf_report(filtered_cows, bulls, name_pdf)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf)
+
+                    path = pdf_file_path.replace('.pdf', '')
+                    path = os.path.basename(path)
+                    Report.objects.create(
+                        title=f"{name_pdf} ({user_name})",
+                        user=user,
+                        path=path,
+                    )
+
                 return Response({
                     "inbreeding_check": True,
                     "pdf_filename": os.path.basename(pdf_file_path)

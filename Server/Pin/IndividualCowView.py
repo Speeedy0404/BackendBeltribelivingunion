@@ -13,105 +13,49 @@ class IndividualCowView(APIView):
 
         data = request.data
 
+        filters_map = {
+            'minEBVUdoi': ('milkproductionindex__ebv_milk__gte', 'maxEBVUdoi', 'milkproductionindex__ebv_milk__lte'),
+            'minEBVZhirKg': ('milkproductionindex__ebv_fkg__gte', 'maxEBVZhirKg', 'milkproductionindex__ebv_fkg__lte'),
+            'minEBVZhirPprc': (
+                'milkproductionindex__ebv_fprc__gte', 'maxEBVZhirPprc', 'milkproductionindex__ebv_fprc__lte'),
+            'minEBVBelokKg': (
+                'milkproductionindex__ebv_pkg__gte', 'maxEBVBelokKg', 'milkproductionindex__ebv_pkg__lte'),
+            'minEBVBelokPprc': (
+                'milkproductionindex__ebv_pprc__gte', 'maxEBVBelokPprc', 'milkproductionindex__ebv_pprc__lte'),
+            'minRBVT': ('conformationindex__rbvt__gte', 'maxRBVT', 'conformationindex__rbvt__lte'),
+            'minRBVF': ('conformationindex__rbvf__gte', 'maxRBVF', 'conformationindex__rbvf__lte'),
+            'minRBVU': ('conformationindex__rbvu__gte', 'maxRBVU', 'conformationindex__rbvu__lte'),
+            'minRC': ('conformationindex__rc__gte', 'maxRC', 'conformationindex__rc__lte'),
+            'minRF': ('reproductionindex__rf__gte', 'maxRF', 'reproductionindex__rf__lte'),
+            'minRscs': ('somaticcellindex__rscs__gte', 'maxRscs', 'somaticcellindex__rscs__lte'),
+            'minRBVZhirKg': ('milkproductionindex__rbv_fkg__gte', 'maxRBVZhirKg', 'milkproductionindex__rbv_fkg__lte'),
+            'minRBVBelokKg': (
+                'milkproductionindex__rbv_pkg__gte', 'maxRBVBelokKg', 'milkproductionindex__rbv_pkg__lte'),
+            'minRM': ('complexindex__rm__gte', 'maxRM', 'complexindex__rm__lte'),
+            'minPI': ('complexindex__pi__gte', 'maxPI', 'complexindex__pi__lte'),
+        }
+
+        non_empty_values = {
+            key: value for key, value in data.items()
+            if key in filters_map and value not in ['', None, []]
+        }
+
         try:
 
             kod_xoz = self.request.headers.get('Kodrn')
             cow_filter = Q(kodxoz=kod_xoz) & Q(datavybr__isnull=True)
+            if len(non_empty_values) > 0:
+                for key, value in non_empty_values.items():
+                    if key in filters_map:
+                        min_filter, max_key, max_filter = filters_map[key]
 
-            if data.get('minEBVUdoi'):
-                cow_filter &= Q(milkproductionindex__ebv_milk__gte=data['minEBVUdoi'])
-            if data.get('maxEBVUdoi'):
-                cow_filter &= Q(milkproductionindex__ebv_milk__lte=data['maxEBVUdoi'])
+                        # Проверяем min значение
+                        if key in data:
+                            cow_filter &= Q(**{min_filter: value})
 
-            if data.get('minEBVZhirKg'):
-                cow_filter &= Q(milkproductionindex__ebv_fkg__gte=data['minEBVZhirKg'])
-            if data.get('maxEBVZhirKg'):
-                cow_filter &= Q(milkproductionindex__ebv_fkg__lte=data['maxEBVZhirKg'])
-
-            if data.get('minEBVZhirPprc'):
-                cow_filter &= Q(milkproductionindex__ebv_fprc__gte=data['minEBVZhirPprc'])
-            if data.get('maxEBVZhirPprc'):
-                cow_filter &= Q(milkproductionindex__ebv_fprc__lte=data['maxEBVZhirPprc'])
-
-            if data.get('minEBVBelokKg'):
-                cow_filter &= Q(milkproductionindex__ebv_pkg__gte=data['minEBVBelokKg'])
-            if data.get('maxEBVBelokKg'):
-                cow_filter &= Q(milkproductionindex__ebv_pkg__lte=data['maxEBVBelokKg'])
-
-            if data.get('minEBVBelokPprc'):
-                cow_filter &= Q(milkproductionindex__ebv_pprc__gte=data['minEBVBelokPprc'])
-            if data.get('maxEBVBelokPprc'):
-                cow_filter &= Q(milkproductionindex__ebv_pprc__lte=data['maxEBVBelokPprc'])
-
-            if data.get('minRBVT'):
-                cow_filter &= Q(conformationindex__rbvt__gte=data['minRBVT'])
-            if data.get('maxRBVT'):
-                cow_filter &= Q(conformationindex__rbvt__lte=data['maxRBVT'])
-
-            if data.get('minRBVF'):
-                cow_filter &= Q(conformationindex__rbvf__gte=data['minRBVF'])
-            if data.get('maxRBVF'):
-                cow_filter &= Q(conformationindex__rbvf__lte=data['maxRBVF'])
-
-            if data.get('minRBVU'):
-                cow_filter &= Q(conformationindex__rbvu__gte=data['minRBVU'])
-            if data.get('maxRBVU'):
-                cow_filter &= Q(conformationindex__rbvu__lte=data['maxRBVU'])
-
-            if data.get('minRC'):
-                cow_filter &= Q(conformationindex__rc__gte=data['minRC'])
-            if data.get('maxRC'):
-                cow_filter &= Q(conformationindex__rc__lte=data['maxRC'])
-
-            if data.get('minRF'):
-                cow_filter &= Q(reproductionindex__rf__gte=data['minRF'])
-            if data.get('maxRF'):
-                cow_filter &= Q(reproductionindex__rf__lte=data['maxRF'])
-
-            if data.get('minRscs'):
-                cow_filter &= Q(somaticcellindex__rscs__gte=data['minRscs'])
-            if data.get('maxRscs'):
-                cow_filter &= Q(somaticcellindex__rscs__lte=data['maxRscs'])
-
-            if data.get('minRBVZhirKg'):
-                cow_filter &= Q(milkproductionindex__rbv_fkg__gte=data['minRBVZhirKg'])
-            if data.get('maxRBVZhirKg'):
-                cow_filter &= Q(milkproductionindex__rbv_fkg__lte=data['maxRBVZhirKg'])
-
-            if data.get('minRBVBelokKg'):
-                cow_filter &= Q(milkproductionindex__rbv_pkg__gte=data['minRBVBelokKg'])
-            if data.get('maxRBVBelokKg'):
-                cow_filter &= Q(milkproductionindex__rbv_pkg__lte=data['maxRBVBelokKg'])
-
-            if data.get('minRM'):
-                cow_filter &= Q(complexindex__rm__gte=data['minRM'])
-            if data.get('maxRM'):
-                cow_filter &= Q(complexindex__rm__lte=data['maxRM'])
-
-            if data.get('minPI'):
-                cow_filter &= Q(complexindex__pi__gte=data['minPI'])
-            if data.get('maxPI'):
-                cow_filter &= Q(complexindex__pi__lte=data['maxPI'])
-
-            # if data.get('selectedComplex') or data.get('selectedLine'):
-            #     if data.get('selectedComplex') and data.get('selectedLine'):
-            #         bull_keys = PKBull.objects.filter(
-            #             kompleks__in=data['selectedComplex'], lin__branch_name=data['selectedLine'],
-            #         ).values('uniq_key')
-            #     elif data.get('selectedComplex'):
-            #         bull_keys = PKBull.objects.filter(
-            #             kompleks__in=data['selectedComplex'],
-            #         ).values('uniq_key')
-            #     else:
-            #         bull_keys = PKBull.objects.filter(
-            #             lin__branch_name=data['selectedLine']
-            #         ).values('uniq_key')
-            #
-            #     cow_filter &= Q(uniq_key__in=Subquery(
-            #         Parentage.objects.filter(
-            #             ukeyo__in=bull_keys
-            #         ).values('uniq_key')
-            #     ))
+                        # Проверяем max значение (соответствующий max_key)
+                        if max_key in data and data[max_key] not in ['', None, []]:
+                            cow_filter &= Q(**{max_filter: data[max_key]})
 
             if data.get('selectedComplex'):
                 cow_filter &= Q(kompleks__in=data['selectedComplex'])
@@ -142,5 +86,6 @@ class IndividualCowView(APIView):
 
         except FileNotFoundError:
             return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)
+
         except json.JSONDecodeError:
             return Response({"error": "Ошибка декодирования JSON."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

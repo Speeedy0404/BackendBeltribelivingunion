@@ -496,8 +496,27 @@ class Farms(models.Model):
     kter = models.IntegerField(verbose_name='kter', null=True, blank=True)
     area = models.CharField(max_length=20, verbose_name='area', null=True, blank=True)
     region = models.CharField(max_length=20, verbose_name='region', null=True, blank=True)
+
+
+class JsonFarmsData(models.Model):
+    pk_farm = models.OneToOneField(Farms, on_delete=models.CASCADE)
     aggregated_data = models.JSONField(verbose_name='Aggregated Data', null=True, blank=True)
     chart_data = models.JSONField(verbose_name='Chart Data', null=True, blank=True)
+
+
+class Report(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Название отчёта")
+    path = models.CharField(max_length=255, verbose_name="Путь")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="reports", verbose_name="Создатель")
+
+    def __str__(self):
+        return f"{self.title} (создано {self.user.username})"
+
+    class Meta:
+        verbose_name = "Отчёт"
+        verbose_name_plural = "Отчёты"
+        ordering = ['-created_at']
 
 
 class BookBranches(models.Model):

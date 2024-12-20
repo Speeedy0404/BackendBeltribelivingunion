@@ -56,25 +56,6 @@ class GetInfoCowView(APIView):
 
             tree = build_tree_info(search)
 
-            # father = PKBull.objects.filter(
-            #     uniq_key__in=Subquery(Parentage.objects.filter(uniq_key=search).values('ukeyo')))
-
-            # if father.exists():
-            #     por = BookBreeds.objects.filter(
-            #         breed_code=father.first().por
-            #     ).values_list('breed_name', flat=True)
-            #
-            #     branch = BookBranches.objects.filter(
-            #         branch_code=father.first().vet
-            #     ).values_list('branch_name', flat=True)
-            #     kompleks = father.first().kompleks
-            #     lin = father.first().lin.abbreviated_branch_name
-            # else:
-            #     por = 'Не указан'
-            #     branch = 'Не указан'
-            #     lin = 'Не указан'
-            #     kompleks = 'Не указан'
-
             por = BookBreeds.objects.filter(
                 breed_code=queryset.first().por
             ).values_list('breed_name', flat=True)
