@@ -102,18 +102,7 @@ class IndividualBullView(APIView):
             decoded_string = urllib.parse.unquote(gpp)
 
             # bull_filter = Q(milkproductionindexbull__rm__isnull=False)
-            bull_filter = Q(sperma__gte=10)
-
-            if len(decoded_string) > 1:
-                codes = []
-                for item in decoded_string.split(','):
-                    codes.append(book[item])
-                if 0.0 not in codes:
-                    bull_filter &= Q(ovner__in=codes)
-                else:
-                    codes.remove(0.0)
-                    result = [item for item in not_need if item not in codes]
-                    bull_filter &= ~Q(ovner__in=result)
+            bull_filter = Q()
 
             if data.get('minEBVUdoi'):
                 bull_filter &= Q(milkproductionindexbull__ebv_milk__gte=data['minEBVUdoi'])
@@ -196,12 +185,49 @@ class IndividualBullView(APIView):
             if data.get('selectedLine'):
                 bull_filter &= Q(lin__branch_name=data['selectedLine'])
 
+            bull_filter_purchased = None
+
+            if len(decoded_string) > 1:
+                codes = []
+                for item in decoded_string.split(','):
+                    codes.append(book[item])
+                if 0.0 in codes:
+                    bull_filter_purchased = bull_filter
+                    bull_filter_purchased &= Q(nomer__startswith='7')
+                    bull_filter_purchased &= Q(sperma__gte=0)
+                    bull_filter_purchased &= Q(sperma__lt=10)
+                    bull_filter_purchased &= ~Q(ovner__in=not_need)
+                if 0.0 not in codes:
+                    bull_filter &= Q(ovner__in=codes)
+                else:
+                    codes.remove(0.0)
+                    result = [item for item in not_need if item not in codes]
+                    bull_filter &= ~Q(ovner__in=result)
+            else:
+                bull_filter_purchased = bull_filter
+                bull_filter_purchased &= Q(nomer__startswith='7')
+                bull_filter_purchased &= Q(sperma__gte=0)
+                bull_filter_purchased &= Q(sperma__lt=10)
+                bull_filter_purchased &= ~Q(ovner__in=not_need)
+
+            bull_filter &= Q(sperma__gte=10)
+
             data_element = data.get('0')
+
+            bulls_purchased = None
 
             if data_element:
                 bulls = get_filtered_bulls(data, bull_filter)
+                if bull_filter_purchased is not None:
+                    bulls_purchased = get_filtered_bulls(data, bull_filter_purchased)
             else:
                 bulls = list(PKBull.objects.filter(bull_filter).values_list('uniq_key', flat=True))
+                if bull_filter_purchased is not None:
+                    bulls_purchased = list(
+                        PKBull.objects.filter(bull_filter_purchased).values_list('uniq_key', flat=True))
+
+            if bulls_purchased is not None:
+                bulls = bulls + bulls_purchased
 
             queryset = PKBull.objects.filter(
                 uniq_key__in=bulls
