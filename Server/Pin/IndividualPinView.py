@@ -5,7 +5,7 @@ from rest_framework import status
 from scipy.stats import gaussian_kde
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..serializers import IndividualPinSerializer, AggregatedDataSerializer
+from ..serializers import IndividualPinSerializer
 
 
 def get_density(object_with_data):

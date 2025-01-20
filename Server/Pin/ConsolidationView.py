@@ -38,23 +38,51 @@ def perform_consolidation(cows, mod):
             cow.save()
 
 
-def get_ancestors_for_animals(animals, generations=3):
-    ancestry = defaultdict(lambda: defaultdict(list))
+def get_ancestors_for_animals(animals, mode='bull', generations=3):
+    if mode == 'cow' or mode == 'bull':
+        ancestry = defaultdict(lambda: defaultdict(list))
 
-    current_animals = set(animals)
-    animals_with_few_relatives = []
+        current_animals = set(animals)
+        animals_with_few_relatives = []
 
-    for generation in range(1, generations + 1):
-        parentages = Parentage.objects.filter(uniq_key__in=current_animals)
+        for generation in range(1, generations + 1):
+            parentages = Parentage.objects.filter(uniq_key__in=current_animals)
+            next_animals = set()
+            for parentage in parentages:
+                if parentage.ukeyo:
+                    ancestry[parentage.uniq_key][generation].append(parentage.ukeyo)
+                    next_animals.add(parentage.ukeyo)
+                if parentage.ukeym:
+                    ancestry[parentage.uniq_key][generation].append(parentage.ukeym)
+                    next_animals.add(parentage.ukeym)
+            current_animals = next_animals
+    else:
+        ancestry = defaultdict(lambda: defaultdict(list))
+
+        parentages = PKYoungAnimals.objects.filter(uniq_key__in=animals)
+        animals_with_few_relatives = []
         next_animals = set()
+
         for parentage in parentages:
-            if parentage.ukeyo:
-                ancestry[parentage.uniq_key][generation].append(parentage.ukeyo)
-                next_animals.add(parentage.ukeyo)
-            if parentage.ukeym:
-                ancestry[parentage.uniq_key][generation].append(parentage.ukeym)
-                next_animals.add(parentage.ukeym)
+            if parentage.f_regnomer:
+                ancestry[parentage.uniq_key][1].append(parentage.f_regnomer)
+                next_animals.add(parentage.f_regnomer)
+            if parentage.m_regnomer:
+                ancestry[parentage.uniq_key][1].append(parentage.m_regnomer)
+                next_animals.add(parentage.m_regnomer)
         current_animals = next_animals
+
+        for generation in range(2, generations + 1):
+            parentages = Parentage.objects.filter(uniq_key__in=current_animals)
+            next_animals = set()
+            for parentage in parentages:
+                if parentage.ukeyo:
+                    ancestry[parentage.uniq_key][generation].append(parentage.ukeyo)
+                    next_animals.add(parentage.ukeyo)
+                if parentage.ukeym:
+                    ancestry[parentage.uniq_key][generation].append(parentage.ukeym)
+                    next_animals.add(parentage.ukeym)
+            current_animals = next_animals
 
     def build_full_ancestry(animal, current_gen=1):
         """Рекурсивно добавляет предков в родословную."""
@@ -69,33 +97,31 @@ def get_ancestors_for_animals(animals, generations=3):
         return parents + grandparents
 
     full_ancestry = {}
+
     for animal in animals:
         full_ancestry[animal] = {}
         parents = build_full_ancestry(animal)
 
         if len(parents) < 14:
-            full_ancestry[animal][1] = parents
-            full_ancestry[animal][2] = []
+            full_ancestry[animal][2] = parents
             full_ancestry[animal][3] = []
+            full_ancestry[animal][4] = []
 
             animals_with_few_relatives.append({'animal': animal, 'relatives_count': len(parents)})
         else:
-            full_ancestry[animal][1] = parents[0:2]
-            full_ancestry[animal][2] = parents[2:4] + parents[8:10]
-            full_ancestry[animal][3] = parents[4:8] + parents[10:14]
+            full_ancestry[animal][2] = parents[0:2]
+            full_ancestry[animal][3] = parents[2:4] + parents[8:10]
+            full_ancestry[animal][4] = parents[4:8] + parents[10:14]
 
     return full_ancestry, animals_with_few_relatives
 
 
-def check_inbreeding(bulls, cows):
+def check_inbreeding(bulls, cows, mode):
     """Функция проверяет на инбридинг для списка быков и коров"""
     results = []
 
     ancestry_bull, not_full_bull = get_ancestors_for_animals(bulls)
-    ancestry_cow, not_full_cow = get_ancestors_for_animals(cows)
-
-    print(len(ancestry_bull))
-    print(len(ancestry_cow))
+    ancestry_cow, not_full_cow = get_ancestors_for_animals(cows, mode)
 
     for bull, bull_tree in ancestry_bull.items():
         for cow, cow_tree in ancestry_cow.items():
@@ -114,11 +140,28 @@ def check_inbreeding(bulls, cows):
     if len(results) < 1:
         results.append('Нет инбредных животных')
 
+    not_full_cow.extend(not_full_bull)
+
     print(len(not_full_bull))
     print(len(not_full_cow))
-    print(not_full_cow)
 
-    not_full_cow.extend(not_full_bull)
+    if results[0] != 'Нет инбредных животных':
+        for item in results:
+            try:
+                bull = PKBull.objects.get(uniq_key=item['bull'])
+                item['nomer'] = bull.nomer
+                item['klichka'] = bull.klichka
+            except PKBull.DoesNotExist:
+                item['nomer'] = ''
+                item['klichka'] = ''
+            except KeyError:
+                item['nomer'] = ''
+                item['klichka'] = ''
+            except Exception as e:
+                item['nomer'] = ''
+                item['klichka'] = ''
+                print(f"Произошла ошибка: {e}")
+
     return results
 
 
@@ -385,40 +428,30 @@ class ConsolidationView(APIView):
 
         try:
             if mod == 'standard':
-                inbreeding_results = check_inbreeding(bulls, cows)
+                inbreeding_results = check_inbreeding(bulls, cows, mode)
                 if len(inbreeding_results) == 1 and inbreeding_results[0] == 'Нет инбредных животных':
-                    perform_consolidation(cows, mode)
-                    if user_name:
-                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
-                        create_xlsx_report(cows, bulls, name_pdf, user_name)
-                        path = pdf_file_path.replace('.pdf', '')
-                        path = os.path.basename(path)
-                        Report.objects.create(
-                            title=f"{name_pdf} ({user_name})",
-                            user=user,
-                            path=path,
-                        )
-
-                    else:
-                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
-                        create_xlsx_report(cows, bulls, name_pdf)
-
-                        path = pdf_file_path.replace('.pdf', '')
-                        path = os.path.basename(path)
-                        Report.objects.create(
-                            title=f"{name_pdf} ({user_name})",
-                            user=user,
-                            path=path,
-                        )
-
                     return Response({
                         "inbreeding_check": True,
-                        "pdf_filename": os.path.basename(pdf_file_path)  # Имя PDF файла для фронтенда
                     }, status=status.HTTP_200_OK)
                 else:
+                    bull_inbred_counts = defaultdict(set)
+
+                    for result in inbreeding_results:
+                        bull = result['bull']
+                        cow = result['cow']
+                        bull_inbred_counts[bull].add(cow)
+
+                    response_data = []
+                    for bull, cows in bull_inbred_counts.items():
+                        response_data.append({
+                            "bull": bull,
+                            "inbred_cows_count": len(cows)
+                        })
+
                     return Response({
                         "inbreeding_check": False,
-                        "inbred_animals": inbreeding_results
+                        "inbred_animals": inbreeding_results,
+                        "count_unique_cows": response_data
                     }, status=status.HTTP_200_OK)
             elif mod == "With":
                 perform_consolidation(cows, mode)
@@ -483,6 +516,42 @@ class ConsolidationView(APIView):
                     "inbreeding_check": True,
                     "pdf_filename": os.path.basename(pdf_file_path)
                 }, status=status.HTTP_200_OK)
+            elif mod == 'standard_confirm':
+                inbreeding_results = check_inbreeding(bulls, cows, mode)
+                if len(inbreeding_results) == 1 and inbreeding_results[0] == 'Нет инбредных животных':
+                    perform_consolidation(cows, mode)
+                    if user_name:
+                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
+                        create_xlsx_report(cows, bulls, name_pdf, user_name)
+                        path = pdf_file_path.replace('.pdf', '')
+                        path = os.path.basename(path)
+                        Report.objects.create(
+                            title=f"{name_pdf} ({user_name})",
+                            user=user,
+                            path=path,
+                        )
+
+                    else:
+                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
+                        create_xlsx_report(cows, bulls, name_pdf)
+
+                        path = pdf_file_path.replace('.pdf', '')
+                        path = os.path.basename(path)
+                        Report.objects.create(
+                            title=f"{name_pdf} ({user_name})",
+                            user=user,
+                            path=path,
+                        )
+
+                    return Response({
+                        "inbreeding_check": True,
+                        "pdf_filename": os.path.basename(pdf_file_path)  # Имя PDF файла для фронтенда
+                    }, status=status.HTTP_200_OK)
+                else:
+                    return Response({
+                        "inbreeding_check": False,
+                        "inbred_animals": inbreeding_results
+                    }, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

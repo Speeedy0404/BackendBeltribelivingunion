@@ -405,38 +405,52 @@ def add_json_char_data_for_farms():
 
 
 if __name__ == '__main__':
-    start_time = time.time()
-
-    for component in import_list:
-        if len(component) == 3:
-            process_chunks(model=component[0], fields=component[1], file_path=component[2])
-        else:
-            process_chunks(model=component[0], fields=component[1], file_path=component[2], pk_model=component[3])
-
-    end_time = time.time()
-    print(f"Импорт данных  за {end_time - start_time:.2f} секунд.")
-
-    start_time = time.time()
-    create_json()
-    end_time = time.time()
-    print(f"Создание json за {end_time - start_time:.2f} секунд.")
-
-    start_time = time.time()
-    add_date_cow_table()
-    end_time = time.time()
-    print(f"Добавление необходимых данных коровам  за {end_time - start_time:.2f} секунд.")
-
-    start_time = time.time()
-    add_json_aggregated_data_for_farms()
-    end_time = time.time()
-    print(f"Добавление агрегированых данных для хозяйств {end_time - start_time:.2f} секунд.")
-
-    start_time = time.time()
-    add_json_char_data_for_farms()
-    end_time = time.time()
-    print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
+    # start_time = time.time()
+    #
+    # for component in import_list:
+    #     if len(component) == 3:
+    #         process_chunks(model=component[0], fields=component[1], file_path=component[2])
+    #     else:
+    #         process_chunks(model=component[0], fields=component[1], file_path=component[2], pk_model=component[3])
+    #
+    # end_time = time.time()
+    # print(f"Импорт данных  за {end_time - start_time:.2f} секунд.")
+    #
+    # start_time = time.time()
+    # create_json()
+    # end_time = time.time()
+    # print(f"Создание json за {end_time - start_time:.2f} секунд.")
+    #
+    # start_time = time.time()
+    # add_date_cow_table()
+    # end_time = time.time()
+    # print(f"Добавление необходимых данных коровам  за {end_time - start_time:.2f} секунд.")
+    #
+    # start_time = time.time()
+    # add_json_aggregated_data_for_farms()
+    # end_time = time.time()
+    # print(f"Добавление агрегированых данных для хозяйств {end_time - start_time:.2f} секунд.")
+    #
+    # start_time = time.time()
+    # add_json_char_data_for_farms()
+    # end_time = time.time()
+    # print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
 
     # cow = PK.objects.filter(consolidation=True)
     # for c in cow:
     #     c.consolidation = False
     #     c.save()
+
+    from django.contrib.auth.models import User
+
+    # user_m = User.objects.create_user('belPlem_Minsk', 'Minsk@example.com', 'Lbj79gN_HOl27D5')
+    # user_m.save()
+    #
+    # user_g = User.objects.create_user('belPlem_Grodno', 'Grodno@example.com', 'Fzlkjy_E3XO9rD')
+    # user_g.save()
+    #
+    # user_b = User.objects.create_user('belPlem_Brest', 'Brest@example.com', 'lChLxj_L6igW5jT')
+    # user_b.save()
+
+    # user_b = User.objects.create_user('belPlem_Vitebsk', 'Vitebsk@example.com', 'K62Sv9_COqT3WTl8')
+    # user_b.save()
