@@ -487,7 +487,7 @@ class AggregatedDataSerializer(serializers.Serializer):
         )
         scs, median_scs = self.get_values_of_data(
             cow_ids,
-            ['rbv_scs'],
+            ['rscs'],
             SomaticCellIndex
         )
         com, median_com = self.get_values_of_data(

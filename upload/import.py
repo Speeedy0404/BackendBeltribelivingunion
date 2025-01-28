@@ -18,6 +18,7 @@ from scipy.stats import gaussian_kde
 from collections import Counter
 import json
 import logging
+import re
 
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -452,5 +453,32 @@ if __name__ == '__main__':
     # user_b = User.objects.create_user('belPlem_Brest', 'Brest@example.com', 'lChLxj_L6igW5jT')
     # user_b.save()
 
-    # user_b = User.objects.create_user('belPlem_Vitebsk', 'Vitebsk@example.com', 'K62Sv9_COqT3WTl8')
+    # user_b = User.objects.create_user('belPlem_Gomel', 'Gomel@example.com', 'iZ674Zgl_UBFDOs0')
     # user_b.save()
+    #
+    # user_b = User.objects.create_user('belPlem_Mogilev', 'Mogilev@example.com', 'qD7Ay65U_36m7nas')
+    # user_b.save()
+
+
+    cow = PKYoungAnimals.objects.filter(kodxoz=381878, uniq_key= 'BY000125655411', consolidation=True)
+    for c in cow:
+        c.consolidation = False
+        c.save()
+
+    # farms = Farms.objects.all()
+    # for farm in farms:
+    #     if '/' in farm.norg:
+    #         print('/')
+    #         farm.norg = farm.norg.replace('/', '')  # сохраняем результат замены
+    #     if '.' in farm.norg:
+    #         print('.')
+    #         farm.norg = farm.norg.replace('.', ' ')  # сохраняем результат замены
+    #     if farm.norg.endswith(' '):
+    #         print('nuda')
+    #         farm.norg = farm.norg.rstrip()
+    #
+    #     farm.norg = re.sub(r'\s+', ' ', farm.norg)
+    #
+    #     farm.save()
+
+

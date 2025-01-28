@@ -173,18 +173,18 @@ def sanitize_filename(name):
     return name
 
 
-def get_unique_filename(base_name, type_file):
+def get_unique_filename(base_name, type_file, current_time=None):
     """Создание уникального имени файла с добавлением текущей даты и времени. Создание директории, если ее нет."""
     directory_path = os.path.join(REPORT_DIR, f'{base_name}')
 
     if not os.path.isdir(directory_path):
         os.mkdir(directory_path)
-
-    current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+    if current_time is None:
+        current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     report_path = os.path.join(directory_path, f'{base_name}_{current_time}.{type_file}')
 
-    return report_path
+    return report_path, current_time
 
 
 def create_pdf_report(cows, bulls, name_pdf, user_name=None):
@@ -194,7 +194,7 @@ def create_pdf_report(cows, bulls, name_pdf, user_name=None):
             os.makedirs(REPORT_DIR)
 
         sanitized_name = sanitize_filename(name_pdf)
-        pdf_path = get_unique_filename(sanitized_name, 'pdf')
+        pdf_path, current_time = get_unique_filename(sanitized_name, 'pdf')
 
         if user_name is not None:
             user_name = sanitize_filename(user_name)
@@ -310,27 +310,31 @@ def create_pdf_report(cows, bulls, name_pdf, user_name=None):
             ]
         doc.build(content, onFirstPage=draw_separator)
 
-        return pdf_path
+        return pdf_path, current_time
 
     except Exception as e:
         print(f"Ошибка при создании PDF отчета: {e}")
         raise
 
 
-def create_xlsx_report(cows, bulls, name_xlsx, user_name=None):
+def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=None):
     try:
         if not os.path.exists(REPORT_DIR):
             os.makedirs(REPORT_DIR)
 
         sanitized_name = sanitize_filename(name_xlsx)
-        xlsx_path = get_unique_filename(sanitized_name, 'xlsx')
+        xlsx_path, current_time = get_unique_filename(sanitized_name, 'xlsx', current_time)
 
         if user_name is not None:
             user_name = sanitize_filename(user_name)
             xlsx_path = xlsx_path[:-5] + '__' + user_name + xlsx_path[-5:]
 
         bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka')
-        cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', )
+
+        if mode != 'young':
+            cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', )
+        else:
+            cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', )
         wb = Workbook()
         ws = wb.active
         ws.title = "Закрепление"
@@ -456,9 +460,8 @@ class ConsolidationView(APIView):
             elif mod == "With":
                 perform_consolidation(cows, mode)
                 if user_name:
-                    pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
-                    create_xlsx_report(cows, bulls, name_pdf, user_name)
-
+                    pdf_file_path, current_time = create_pdf_report(cows, bulls, name_pdf, user_name)
+                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time, user_name)
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
                     Report.objects.create(
@@ -468,8 +471,8 @@ class ConsolidationView(APIView):
                     )
 
                 else:
-                    pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
-                    create_xlsx_report(cows, bulls, name_pdf)
+                    pdf_file_path, current_time = create_pdf_report(cows, bulls, name_pdf)
+                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -489,8 +492,8 @@ class ConsolidationView(APIView):
                 filtered_cows = [cow for cow in cows if cow not in cows_to_remove]
                 perform_consolidation(filtered_cows, mode)
                 if user_name:
-                    pdf_file_path = create_pdf_report(filtered_cows, bulls, name_pdf, user_name)
-                    create_xlsx_report(filtered_cows, bulls, name_pdf, user_name)
+                    pdf_file_path, current_time = create_pdf_report(filtered_cows, bulls, name_pdf, user_name)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time, user_name)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -501,8 +504,8 @@ class ConsolidationView(APIView):
                     )
 
                 else:
-                    pdf_file_path = create_pdf_report(filtered_cows, bulls, name_pdf)
-                    create_xlsx_report(filtered_cows, bulls, name_pdf)
+                    pdf_file_path, current_time = create_pdf_report(filtered_cows, bulls, name_pdf)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -521,8 +524,8 @@ class ConsolidationView(APIView):
                 if len(inbreeding_results) == 1 and inbreeding_results[0] == 'Нет инбредных животных':
                     perform_consolidation(cows, mode)
                     if user_name:
-                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf, user_name)
-                        create_xlsx_report(cows, bulls, name_pdf, user_name)
+                        pdf_file_path, current_time, = create_pdf_report(cows, bulls, name_pdf, user_name)
+                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time, user_name)
                         path = pdf_file_path.replace('.pdf', '')
                         path = os.path.basename(path)
                         Report.objects.create(
@@ -532,8 +535,8 @@ class ConsolidationView(APIView):
                         )
 
                     else:
-                        pdf_file_path = create_pdf_report(cows, bulls, name_pdf)
-                        create_xlsx_report(cows, bulls, name_pdf)
+                        pdf_file_path, current_time, = create_pdf_report(cows, bulls, name_pdf)
+                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time)
 
                         path = pdf_file_path.replace('.pdf', '')
                         path = os.path.basename(path)

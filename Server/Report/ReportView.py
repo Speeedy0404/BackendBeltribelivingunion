@@ -5,7 +5,7 @@ from rest_framework import status
 from django.http import FileResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..models import Report, PK
+from ..models import Report, PK, PKYoungAnimals
 
 REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
 
@@ -61,12 +61,17 @@ class ReportView(APIView):
                         for row in sheet.iter_rows(min_row=5, max_col=1, values_only=True):
                             if row[0]:
                                 cow_numbers.append(row[0])
-                        print(cow_numbers)
+
 
                 except Exception as e:
                     print(f"Ошибка при удалении файла: {e}")
 
-                PK.objects.filter(uniq_key__in=cow_numbers).update(consolidation=False)
+                cows = PK.objects.filter(uniq_key__in=cow_numbers).values_list('uniq_key')
+
+                if len(cows) == len(cow_numbers):
+                    PK.objects.filter(uniq_key__in=cow_numbers).update(consolidation=False)
+                else:
+                    PKYoungAnimals.objects.filter(uniq_key__in=cow_numbers).update(consolidation=False)
 
                 if os.path.exists(xlsx_path):
                     os.remove(xlsx_path)
