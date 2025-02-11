@@ -6,6 +6,7 @@ from Server.views import *
 
 from Server.Pin.FarmsListView import *
 from Server.Pin.IndividualPinView import *
+from Server.Pin.ParameterForecastingView import *
 from Server.Pin.IndividualBullView import *
 from Server.Pin.IndividualCowView import *
 from Server.Pin.IndividualYoungView import *
@@ -31,6 +32,9 @@ urlpatterns = [
 
     # API для получения данных общих данных о ферме
     path('api/v1/individual-pin/', IndividualPinView.as_view(), name='individual-pin'),
+
+    # API для проведения прогнозирования параметров по закреплению сделанных в хоз.
+    path('api/v1/parameter-forecasting/', ParameterForecastingView.as_view(), name='parameter-forecasting'),
 
     # API для получения данных о быках с применением фильтра
     path('api/v1/api/v1/pkbull-individual/', IndividualBullView.as_view(), name='individual-pin-bull'),

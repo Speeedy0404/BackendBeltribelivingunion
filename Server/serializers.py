@@ -477,17 +477,19 @@ class AggregatedDataSerializer(serializers.Serializer):
         )
         conf, median_conf = self.get_values_of_data(
             cow_ids,
-            ['rbvt', 'rbvf', 'rbvu', 'rc'],
+            ['ebv_tip', 'ebv_kt', 'ebv_rost', 'ebv_gt', 'ebv_pz', 'ebv_shz', 'ebv_pzkb', 'ebv_pzkz', 'ebv_sust',
+             'ebv_pzkop', 'ebv_gv', 'ebv_pdv', 'ebv_vzcv', 'ebv_szcv', 'ebv_csv', 'ebv_rps', 'ebv_rzs', 'ebv_ds',
+             'rbvt', 'rbvf', 'rbvu', 'rc'],
             ConformationIndex
         )
         reprod, reprod_median = self.get_values_of_data(
             cow_ids,
-            ['rbv_crh', 'rbv_ctfi', 'rbv_do', 'rf'],
+            ['rbv_crh', 'rbv_ctfi', 'rbv_do', 'ebv_crh', 'ebv_ctfi', 'ebv_do', 'rf'],
             ReproductionIndex
         )
         scs, median_scs = self.get_values_of_data(
             cow_ids,
-            ['rscs'],
+            ['ebv_scs', 'rscs'],
             SomaticCellIndex
         )
         com, median_com = self.get_values_of_data(
@@ -705,3 +707,85 @@ class ReportSerializer(serializers.ModelSerializer):
 
     def get_user_name(self, obj):
         return obj.user.username
+
+
+class ForecastingConformationIndexCowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConformationIndex
+        fields = ['ebv_tip', 'ebv_kt', 'ebv_rost', 'ebv_gt', 'ebv_pz', 'ebv_shz', 'ebv_pzkb', 'ebv_pzkz', 'ebv_sust',
+                  'ebv_pzkop', 'ebv_gv', 'ebv_pdv', 'ebv_vzcv', 'ebv_szcv', 'ebv_csv', 'ebv_rps', 'ebv_rzs', 'ebv_ds',
+                  'rel_tip', 'rel_kt', 'rel_rost', 'rel_gt', 'rel_pz', 'rel_shz', 'rel_pzkb', 'rel_pzkz', 'rel_sust',
+                  'rel_pzkop', 'rel_gv', 'rel_pdv', 'rel_vzcv', 'rel_szcv', 'rel_csv', 'rel_rps', 'rel_rzs', 'rel_ds']
+
+
+class ForecastingConformationIndexBullSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConformationIndexBull
+        fields = ['ebv_tip', 'ebv_kt', 'ebv_rost', 'ebv_gt', 'ebv_pz', 'ebv_shz', 'ebv_pzkb', 'ebv_pzkz', 'ebv_sust',
+                  'ebv_pzkop', 'ebv_gv', 'ebv_pdv', 'ebv_vzcv', 'ebv_szcv', 'ebv_csv', 'ebv_rps', 'ebv_rzs', 'ebv_ds',
+                  'rel_tip', 'rel_kt', 'rel_rost', 'rel_gt', 'rel_pz', 'rel_shz', 'rel_pzkb', 'rel_pzkz', 'rel_sust',
+                  'rel_pzkop', 'rel_gv', 'rel_pdv', 'rel_vzcv', 'rel_szcv', 'rel_csv', 'rel_rps', 'rel_rzs', 'rel_ds']
+
+
+class ForecastingMilkProductionIndexCowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MilkProductionIndex
+        fields = ['ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc',
+                  'rel_milk', 'rel_fkg', 'rel_fprc', 'rel_pkg', 'rel_pprc']
+
+
+class ForecastingMilkProductionIndexBullSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MilkProductionIndexBull
+        fields = ['ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc',
+                  'rel_milk', 'rel_fkg', 'rel_fprc', 'rel_pkg', 'rel_pprc']
+
+
+class ForecastingReproductionIndexCowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReproductionIndex
+        fields = ['ebv_crh', 'ebv_ctfi', 'ebv_do',
+                  'rel_crh', 'rel_ctfi', 'rel_do']
+
+
+class ForecastingReproductionIndexBullSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReproductionIndexBull
+        fields = ['ebv_crh', 'ebv_ctfi', 'ebv_do',
+                  'rel_crh', 'rel_ctfi', 'rel_do']
+
+
+class ForecastingSomaticCellIndexCowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SomaticCellIndex
+        fields = ['ebv_scs', 'rel_scs']
+
+
+class ForecastingSomaticCellIndexBullSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SomaticCellIndexBull
+        fields = ['ebv_scs', 'rel_scs']
+
+
+class CowParameterForecastingSerializer(serializers.ModelSerializer):
+    conformationindex = ForecastingConformationIndexCowSerializer()
+    milkproductionindex = ForecastingMilkProductionIndexCowSerializer()
+    reproductionindex = ForecastingReproductionIndexCowSerializer()
+    somaticcellindex = ForecastingSomaticCellIndexCowSerializer()
+
+    class Meta:
+        model = PK
+        fields = ['conformationindex', 'milkproductionindex', 'reproductionindex',
+                  'somaticcellindex']
+
+
+class BullParameterForecastingSerializer(serializers.ModelSerializer):
+    conformationindexbull = ForecastingConformationIndexBullSerializer()
+    milkproductionindexbull = ForecastingMilkProductionIndexBullSerializer()
+    reproductionindexbull = ForecastingReproductionIndexBullSerializer()
+    somaticcellindexbull = ForecastingSomaticCellIndexBullSerializer()
+
+    class Meta:
+        model = PKBull
+        fields = ['conformationindexbull', 'milkproductionindexbull', 'reproductionindexbull',
+                  'somaticcellindexbull']

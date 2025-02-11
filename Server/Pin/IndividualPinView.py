@@ -111,13 +111,50 @@ class IndividualPinView(APIView):
             try:
                 farm = Farms.objects.get(korg=farm_code, norg=farm_name)
 
+                if farm.jsonfarmsdata.parameter_forecasting is None:
+                    parameter_forecasting = {
+                        'tip': 0,
+                        'kt': 0,
+                        'rost': 0,
+                        'gt': 0,
+                        'pz': 0,
+                        'shz': 0,
+                        'pzkb': 0,
+                        'pzkz': 0,
+                        'sust': 0,
+                        'pzkop': 0,
+                        'gv': 0,
+                        'pdv': 0,
+                        'vzcv': 0,
+                        'szcv': 0,
+                        'csv': 0,
+                        'rps': 0,
+                        'rzs': 0,
+                        'ds': 0,
+
+                        'milk': 0,
+                        'fkg': 0,
+                        'fprc': 0,
+                        'pkg': 0,
+                        'pprc': 0,
+
+                        'crh': 0,
+                        'ctfi': 0,
+                        'do': 0,
+
+                        'scs': 0
+                    }
+                else:
+                    parameter_forecasting = farm.jsonfarmsdata.parameter_forecasting["parameter_forecasting"]
+
                 result_data = {
                     'aggregated_data': farm.jsonfarmsdata.aggregated_data["aggregated_data"],
                     'density_data': farm.jsonfarmsdata.chart_data["char_data"],
+                    'parameter_forecasting': parameter_forecasting,
                 }
 
                 return Response(result_data, status=status.HTTP_200_OK)
             except Farms.DoesNotExist:
-                return Response({"error": "Хозяйство не найдено"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "Проблема с данными"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -1,4 +1,7 @@
 import os
+import shutil
+from tabnanny import check
+
 from django.conf import settings
 from openpyxl import load_workbook
 from rest_framework import status
@@ -77,6 +80,11 @@ class ReportView(APIView):
                     os.remove(xlsx_path)
 
                 report.delete()
+                check_directory_path = os.path.join(REPORT_DIR, directory_path)
+
+                if os.path.exists(check_directory_path):
+                    if not os.listdir(check_directory_path):
+                        shutil.rmtree(check_directory_path)
 
                 return Response({"success": True, "message": "Отчет успешно удален."}, status=status.HTTP_200_OK)
             else:

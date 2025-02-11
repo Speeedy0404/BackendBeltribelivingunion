@@ -502,6 +502,7 @@ class JsonFarmsData(models.Model):
     pk_farm = models.OneToOneField(Farms, on_delete=models.CASCADE)
     aggregated_data = models.JSONField(verbose_name='Aggregated Data', null=True, blank=True)
     chart_data = models.JSONField(verbose_name='Chart Data', null=True, blank=True)
+    parameter_forecasting = models.JSONField(verbose_name='Parameter Forecasting', null=True, blank=True)
 
 
 class Report(models.Model):
