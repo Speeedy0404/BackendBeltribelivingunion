@@ -31,6 +31,15 @@ class ExcelProcessor:
         self.df.columns = new_headers
         print("Заголовки столбцов заменены.")
 
+    def set_headers(self, new_headers):
+        if self.df.empty:
+            self.df = pd.DataFrame(columns=new_headers)
+        else:
+            for i in range(len(new_headers) - len(self.df.columns)):
+                self.df[f'Unnamed: {len(self.df.columns) + i}'] = None
+        self.df.columns = new_headers
+        print("Новые заголовки установлены.")
+
     def merge_with_another_excel(self, other_file_path):
 
         other_df = pd.read_excel(other_file_path, engine='openpyxl')

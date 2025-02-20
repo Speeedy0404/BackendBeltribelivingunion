@@ -56,6 +56,7 @@ class PKBull(models.Model):
 
 
 class PKYoungAnimals(models.Model):
+    nomer = models.IntegerField(verbose_name='nomer', null=True, blank=True)
     uniq_key = models.CharField(max_length=20, unique=True, verbose_name='uniq_key')
     datarojd = models.DateField(null=True, blank=True)
     breed = models.IntegerField(verbose_name='breed', null=True, blank=True)
@@ -65,6 +66,7 @@ class PKYoungAnimals(models.Model):
     m_breed = models.IntegerField(verbose_name='m_breed', null=True, blank=True)
     kodrn = models.IntegerField(verbose_name='kodrn', null=True, blank=True)
     kodxoz = models.IntegerField(verbose_name='kodxoz', null=True, blank=True)
+    kodfer = models.IntegerField(verbose_name='kodfer', null=True, blank=True)
     consolidation = models.BooleanField(verbose_name='consolidation', default=False)
 
 

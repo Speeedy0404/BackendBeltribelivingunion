@@ -49,6 +49,7 @@ FIELDS = {
             'model': PKYoungAnimals,
             'date':
                 [
+                    {'key': 'nomer', 'type': 'str'},
                     {'key': 'uniq_key', 'type': 'str'},
                     {'key': 'datarojd', 'type': 'date'},
                     {'key': 'breed', 'type': 'int'},
@@ -57,7 +58,8 @@ FIELDS = {
                     {'key': 'm_regnomer', 'type': 'str'},
                     {'key': 'm_breed', 'type': 'int'},
                     {'key': 'kodrn', 'type': 'int'},
-                    {'key': 'kodxoz', 'type': 'int'}
+                    {'key': 'kodxoz', 'type': 'int'},
+                    {'key': 'kodfer', 'type': 'int'}
                 ]
         },
     'LAK':

@@ -47,8 +47,9 @@ if __name__ == "__main__":
         processor = ExcelProcessor(file)
         processor.remove_first_row()
         processor.remove_columns(-2)
-        processor.replace_headers(["uniq_key", "breed", "datarojd", "m_regnomer", "m_breed", "f_regnomer",
-                                   "f_breed", "place_of_birth", "kodrn", "kodxoz"])
+        processor.replace_headers(
+            ["kodfer", "nomer", "uniq_key", "breed", "datarojd", "m_regnomer", "m_breed", "f_regnomer",
+             "f_breed", "place_of_birth", "kodrn", "kodxoz"])
         processor.replace_text(".  .", None)
         processor.save_to_excel()
 

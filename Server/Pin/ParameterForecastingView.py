@@ -64,7 +64,7 @@ def calculate_weighted_average_with_bulls(cow_data, averages, index_type):
                         rel_parameter = parameter.replace('ebv_', 'rel_')
                         rel_value = cow_index.get(rel_parameter)
                         if value is None or rel_value is None:
-                            current_param[parameter] = 0
+                            current_param[parameter] = None
                         else:
                             average_need = bull_average.get(parameter, 0)
                             ebv_rel_value = ((2 * (value * (rel_value / 100))) + average_need) / 2
@@ -117,7 +117,10 @@ class ParameterForecastingView(APIView):
             paths = Report.objects.filter(title__icontains=farm.norg).values_list('path', flat=True)
 
             if len(paths) == 0:
-                return Response({'parameter_forecasting': {
+                if farm.jsonfarmsdata.parameter_forecasting is None:
+                    pass
+                else:
+                    farm.jsonfarmsdata.parameter_forecasting = {'parameter_forecasting': {
                         'tip': 0,
                         'kt': 0,
                         'rost': 0,
@@ -148,7 +151,40 @@ class ParameterForecastingView(APIView):
                         'do': 0,
 
                         'scs': 0
-                    },}, status=status.HTTP_200_OK)
+                    }}
+                    farm.jsonfarmsdata.save()
+                return Response({'parameter_forecasting': {
+                    'tip': 0,
+                    'kt': 0,
+                    'rost': 0,
+                    'gt': 0,
+                    'pz': 0,
+                    'shz': 0,
+                    'pzkb': 0,
+                    'pzkz': 0,
+                    'sust': 0,
+                    'pzkop': 0,
+                    'gv': 0,
+                    'pdv': 0,
+                    'vzcv': 0,
+                    'szcv': 0,
+                    'csv': 0,
+                    'rps': 0,
+                    'rzs': 0,
+                    'ds': 0,
+
+                    'milk': 0,
+                    'fkg': 0,
+                    'fprc': 0,
+                    'pkg': 0,
+                    'pprc': 0,
+
+                    'crh': 0,
+                    'ctfi': 0,
+                    'do': 0,
+
+                    'scs': 0
+                }, }, status=status.HTTP_200_OK)
 
             new_paths = [path + ".xlsx" for path in paths]
             directory_path = new_paths[0].split('__')[0][:-16]
@@ -162,7 +198,7 @@ class ParameterForecastingView(APIView):
                     for row in sheet.iter_rows(min_row=5, min_col=1, max_col=1, values_only=True):
                         if row[0]:
                             cow_numbers.append(row[0])
-                    for row in sheet.iter_rows(min_row=5, min_col=4, max_col=4, values_only=True):
+                    for row in sheet.iter_rows(min_row=5, min_col=6, max_col=6, values_only=True):
                         if row[0]:
                             bull_numbers.append(row[0])
                 reports.append([cow_numbers, bull_numbers])
@@ -199,7 +235,8 @@ class ParameterForecastingView(APIView):
                     average_somaticcell = calculate_weighted_average(bull_data, 'somaticcellindexbull')
 
                     cows = calculate_weighted_average_with_bulls(cow_data,
-                                                                 [average_conformation, average_milk, average_reproduction,
+                                                                 [average_conformation, average_milk,
+                                                                  average_reproduction,
                                                                   average_somaticcell],
                                                                  ['conformationindex', 'milkproductionindex',
                                                                   'reproductionindex', 'somaticcellindex'])
@@ -335,7 +372,7 @@ class ParameterForecastingView(APIView):
 
             result = calculate_difference(current, forecasting)
 
-            farm.jsonfarmsdata.parameter_forecasting={'parameter_forecasting': result}
+            farm.jsonfarmsdata.parameter_forecasting = {'parameter_forecasting': result}
             farm.jsonfarmsdata.save()
 
             result_data = {

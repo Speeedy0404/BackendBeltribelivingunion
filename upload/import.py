@@ -19,6 +19,7 @@ from collections import Counter
 import json
 import logging
 import re
+from Prepare.ExcelProcessor import ExcelProcessor
 
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -406,6 +407,8 @@ def add_json_char_data_for_farms():
 
 
 if __name__ == '__main__':
+    pass
+
     # start_time = time.time()
     #
     # for component in import_list:
@@ -437,48 +440,205 @@ if __name__ == '__main__':
     # end_time = time.time()
     # print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
 
-    # cow = PK.objects.filter(consolidation=True)
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    # cow = PK.objects.filter(consolidation=True, kodxoz=39224)
     # for c in cow:
     #     c.consolidation = False
     #     c.save()
 
-    from django.contrib.auth.models import User
-
-    # user_m = User.objects.create_user('belPlem_Minsk', 'Minsk@example.com', 'Lbj79gN_HOl27D5')
-    # user_m.save()
-    #
-    # user_g = User.objects.create_user('belPlem_Grodno', 'Grodno@example.com', 'Fzlkjy_E3XO9rD')
-    # user_g.save()
-    #
-    # user_b = User.objects.create_user('belPlem_Brest', 'Brest@example.com', 'lChLxj_L6igW5jT')
-    # user_b.save()
-
-    # user_b = User.objects.create_user('belPlem_Gomel', 'Gomel@example.com', 'iZ674Zgl_UBFDOs0')
-    # user_b.save()
-    #
-    # user_b = User.objects.create_user('belPlem_Mogilev', 'Mogilev@example.com', 'qD7Ay65U_36m7nas')
-    # user_b.save()
-
-
-    cow = PKYoungAnimals.objects.filter(kodxoz=381878, uniq_key= 'BY000125655411', consolidation=True)
-    for c in cow:
-        c.consolidation = False
-        c.save()
+    # cow = PKYoungAnimals.objects.filter(kodxoz=381878, uniq_key= 'BY000125655411', consolidation=True)
+    # for c in cow:
+    #     c.consolidation = False
+    #     c.save()
 
     # farms = Farms.objects.all()
     # for farm in farms:
     #     if '/' in farm.norg:
-    #         print('/')
     #         farm.norg = farm.norg.replace('/', '')  # сохраняем результат замены
     #     if '.' in farm.norg:
-    #         print('.')
     #         farm.norg = farm.norg.replace('.', ' ')  # сохраняем результат замены
     #     if farm.norg.endswith(' '):
-    #         print('nuda')
     #         farm.norg = farm.norg.rstrip()
     #
     #     farm.norg = re.sub(r'\s+', ' ', farm.norg)
     #
     #     farm.save()
 
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
 
+    # перерегенерация отчетов
+
+    # from django.conf import settings
+    # from openpyxl import Workbook
+    # from openpyxl.styles import Alignment, Font, Border, Side, PatternFill
+    # from openpyxl import load_workbook
+    #
+    # REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
+    #
+    #
+    # def create_xlsx_report(cows, bulls, name_xlsx, mode, directory_path, title):
+    #     try:
+    #
+    #         NEW = os.path.join(settings.BASE_DIR, 'reports', 'AAAAA', directory_path)
+    #
+    #         if not os.path.exists(NEW):
+    #             os.makedirs(NEW)
+    #
+    #         xlsx_path = name_xlsx
+    #         bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka')
+    #
+    #         if mode != 'young':
+    #             cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+    #         else:
+    #             cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+    #
+    #         wb = Workbook()
+    #         ws = wb.active
+    #         ws.title = "Закрепление"
+    #         thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'),
+    #                              bottom=Side(style='thin'))
+    #
+    #         # Установка жирной границы для серой разделительной линии
+    #         thick_border = Border(left=Side(style='thick'), right=Side(style='thick'), top=Side(style='thick'),
+    #                               bottom=Side(style='thick'))
+    #
+    #         ws.merge_cells('A1:G2')
+    #         ws['A1'] = title
+    #         ws['A1'].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    #         ws['A1'].font = Font(bold=True)
+    #         ws.merge_cells('A3:C3')
+    #         ws['A3'] = 'Коровы'
+    #         ws['A3'].alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         ws.merge_cells('E3:G3')
+    #         ws['E3'] = 'Быки'
+    #         ws['E3'].alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         ws['A4'] = 'Индивидуальный номер'
+    #         ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['B4'] = 'Рабочий номер'
+    #         ws['B4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['C4'] = 'Код фермы'
+    #         ws['C4'].alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         ws['E4'] = 'Рабочий номер'
+    #         ws['E4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['F4'] = 'Индивидуальный номер'
+    #         ws['F4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['G4'] = 'Кличка'
+    #         ws['G4'].alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         for row in ws['A1:G2']:
+    #             for cell in row:
+    #                 cell.border = thick_border
+    #         for row in ws['E3:G3']:
+    #             for cell in row:
+    #                 cell.border = thick_border
+    #         for row in ws['E4:G4']:
+    #             for cell in row:
+    #                 cell.border = thick_border
+    #         for row in ws['A3:C4']:
+    #             for cell in row:
+    #                 cell.border = thick_border
+    #
+    #         # Установка ширины столбцов
+    #         ws.column_dimensions['A'].width = 30
+    #         ws.column_dimensions['B'].width = 30
+    #         ws.column_dimensions['C'].width = 30
+    #         ws.column_dimensions['D'].width = 30
+    #         ws.column_dimensions['E'].width = 30
+    #         ws.column_dimensions['F'].width = 30
+    #         ws.column_dimensions['G'].width = 30
+    #
+    #         row_start = 5
+    #
+    #         for row_num, row_data in enumerate(cows, start=row_start):
+    #             cell = ws.cell(row=row_num, column=1, value=row_data[0])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #             cell = ws.cell(row=row_num, column=2, value=row_data[1])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #             cell = ws.cell(row=row_num, column=3, value=row_data[2])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         for row_num, row_data in enumerate(bulls_date, start=row_start):
+    #             cell = ws.cell(row=row_num, column=5, value=row_data[0])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #             cell = ws.cell(row=row_num, column=6, value=row_data[1])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #             cell = ws.cell(row=row_num, column=7, value=row_data[2])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #         wb.save(xlsx_path)
+    #
+    #         return xlsx_path
+    #     except Exception as e:
+    #         print(f"Ошибка при создании xlsx отчета: {e}")
+    #         raise
+    #
+    #
+    # farms = next(os.walk(REPORT_DIR))[1]
+    #
+    # diii = []
+    # all_ex_path = []
+    # new_path = []
+    #
+    # for farm in farms:
+    #     farm_directory = os.path.join(REPORT_DIR, farm)
+    #     if os.path.exists(farm_directory) and os.path.isdir(farm_directory):
+    #         reports = [f for f in os.listdir(farm_directory) if f.endswith('.xlsx')]
+    #     diii.append((farm, reports))
+    #
+    # for element in diii:
+    #     directory_path = element[0]
+    #     reports = element[1]
+    #     for filename in reports:
+    #         report_path = os.path.join(REPORT_DIR, directory_path, filename)
+    #
+    #         title = Report.objects.get(path=filename.replace('.xlsx', ''))
+    #         all_ex_path.append([report_path, element[0], title.title.split('(')[0]])
+    #
+    # for path in all_ex_path:
+    #     new_path.append([path[0].replace('reports', 'reports\\AAAAA'), path[1], path[2]])
+    #
+    # for count in range(len(new_path)):
+    #     xlsx_path = all_ex_path[count][0]
+    #     new_path_p = new_path[count][0]
+    #
+    #     cow_numbers = []
+    #     bull_number = []
+    #
+    #     if os.path.exists(xlsx_path):
+    #
+    #         workbook = load_workbook(xlsx_path)
+    #         sheet = workbook.active
+    #
+    #         for row in sheet.iter_rows(min_row=5, max_col=1, values_only=True):
+    #             if row[0]:
+    #                 cow_numbers.append(row[0])
+    #
+    #         for row in sheet.iter_rows(min_row=5, max_col=4, values_only=True):
+    #             if row[3]:
+    #                 bull_number.append(row[3])
+    #
+    #         cow = PK.objects.filter(uniq_key__in=cow_numbers).values_list('uniq_key', flat=True)
+    #
+    #         if len(cow) == len(cow_numbers):
+    #             create_xlsx_report(cow_numbers, bull_number, new_path_p, 'cow', new_path[count][1], new_path[count][2])
+    #         else:
+    #             create_xlsx_report(cow_numbers, bull_number, new_path_p, 'young', new_path[count][1],
+    #                                new_path[count][2])
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
