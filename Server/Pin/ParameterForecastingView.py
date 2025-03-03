@@ -67,7 +67,7 @@ def calculate_weighted_average_with_bulls(cow_data, averages, index_type):
                             current_param[parameter] = None
                         else:
                             average_need = bull_average.get(parameter, 0)
-                            ebv_rel_value = ((2 * (value * (rel_value / 100))) + average_need) / 2
+                            ebv_rel_value = ((value * (rel_value / 100)) + average_need) / 2
                             current_param[parameter] = ebv_rel_value
                 cow_averages[index] = current_param
         cows.append(cow_averages)
@@ -198,7 +198,7 @@ class ParameterForecastingView(APIView):
                     for row in sheet.iter_rows(min_row=5, min_col=1, max_col=1, values_only=True):
                         if row[0]:
                             cow_numbers.append(row[0])
-                    for row in sheet.iter_rows(min_row=5, min_col=6, max_col=6, values_only=True):
+                    for row in sheet.iter_rows(min_row=5, min_col=7, max_col=7, values_only=True):
                         if row[0]:
                             bull_numbers.append(row[0])
                 reports.append([cow_numbers, bull_numbers])

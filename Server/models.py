@@ -505,6 +505,7 @@ class JsonFarmsData(models.Model):
     aggregated_data = models.JSONField(verbose_name='Aggregated Data', null=True, blank=True)
     chart_data = models.JSONField(verbose_name='Chart Data', null=True, blank=True)
     parameter_forecasting = models.JSONField(verbose_name='Parameter Forecasting', null=True, blank=True)
+    rating_data = models.JSONField(verbose_name='Rating Data', null=True, blank=True)
 
 
 class Report(models.Model):

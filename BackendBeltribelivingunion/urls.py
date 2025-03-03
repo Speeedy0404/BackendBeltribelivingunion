@@ -54,6 +54,9 @@ urlpatterns = [
     # API для общей статистике по всем хоз
     path('api/v1/statistics/', StatisticsListView.as_view(), name='statistics-list'),
 
+    # API для получения рейтинга хоз
+    path('api/v1/rating-of-farms/', RatingOfFarms.as_view(), name='rating-of-farms'),
+
     # API для поиска быка по кличке/номеру/раб. номеру
     path('api/v1/find-animal/', FindAnimalListView.as_view(), name='find-animal'),
 

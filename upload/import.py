@@ -406,6 +406,36 @@ def add_json_char_data_for_farms():
         process.join()
 
 
+def add_rating_for_farms():
+    data_farms = Farms.objects.all()
+
+    for farm in data_farms:
+        farm.jsonfarmsdata.rating_data = [
+            farm.norg,
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['milk']['avg_rm'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['milk']['avg_rm'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvt'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvt'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvf'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvf'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvu'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rbvu'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rc'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['conf']['avg_rc'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['reprod']['avg_rf'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['reprod']['avg_rf'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['com']['avg_pi'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['com']['avg_pi'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_one']['avg_u305'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_one']['avg_u305'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_two']['avg_u305'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_two']['avg_u305'],
+            0 if farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_three']['avg_u305'] is None else
+            farm.jsonfarmsdata.aggregated_data['aggregated_data']['lak_three']['avg_u305'],
+        ]
+        farm.jsonfarmsdata.save()
+
+
 if __name__ == '__main__':
     pass
 
@@ -439,6 +469,11 @@ if __name__ == '__main__':
     # add_json_char_data_for_farms()
     # end_time = time.time()
     # print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
+
+    # start_time = time.time()
+    # add_rating_for_farms()
+    # end_time = time.time()
+    # print(f"Добавление рейтинга для хозяйств {end_time - start_time:.2f} секунд.")
 
     # ----------------------------------------------------------------------------------------------------------------------
 
@@ -487,12 +522,16 @@ if __name__ == '__main__':
     #             os.makedirs(NEW)
     #
     #         xlsx_path = name_xlsx
-    #         bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka')
+    #         bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka',
+    #                                                                            'milkproductionindexbull__rm')
     #
     #         if mode != 'young':
-    #             cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+    #             cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer',
+    #                                                                     'milkproductionindex__rm').order_by('kodfer')
     #         else:
-    #             cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+    #             cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer',
+    #                                                                                 'kodfer').order_by(
+    #                 'kodfer')
     #
     #         wb = Workbook()
     #         ws = wb.active
@@ -504,17 +543,17 @@ if __name__ == '__main__':
     #         thick_border = Border(left=Side(style='thick'), right=Side(style='thick'), top=Side(style='thick'),
     #                               bottom=Side(style='thick'))
     #
-    #         ws.merge_cells('A1:G2')
+    #         ws.merge_cells('A1:I2')
     #         ws['A1'] = title
     #         ws['A1'].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     #         ws['A1'].font = Font(bold=True)
-    #         ws.merge_cells('A3:C3')
+    #         ws.merge_cells('A3:D3')
     #         ws['A3'] = 'Коровы'
     #         ws['A3'].alignment = Alignment(horizontal="center", vertical="center")
     #
-    #         ws.merge_cells('E3:G3')
-    #         ws['E3'] = 'Быки'
-    #         ws['E3'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws.merge_cells('F3:I3')
+    #         ws['F3'] = 'Быки'
+    #         ws['F3'].alignment = Alignment(horizontal="center", vertical="center")
     #
     #         ws['A4'] = 'Индивидуальный номер'
     #         ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
@@ -522,35 +561,43 @@ if __name__ == '__main__':
     #         ws['B4'].alignment = Alignment(horizontal="center", vertical="center")
     #         ws['C4'] = 'Код фермы'
     #         ws['C4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['D4'] = 'RM'
+    #         ws['D4'].alignment = Alignment(horizontal="center", vertical="center")
     #
-    #         ws['E4'] = 'Рабочий номер'
-    #         ws['E4'].alignment = Alignment(horizontal="center", vertical="center")
-    #         ws['F4'] = 'Индивидуальный номер'
+    #         ws['F4'] = 'Рабочий номер'
     #         ws['F4'].alignment = Alignment(horizontal="center", vertical="center")
-    #         ws['G4'] = 'Кличка'
+    #         ws['G4'] = 'Индивидуальный номер'
     #         ws['G4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['H4'] = 'Кличка'
+    #         ws['H4'].alignment = Alignment(horizontal="center", vertical="center")
+    #         ws['I4'] = 'RM'
+    #         ws['I4'].alignment = Alignment(horizontal="center", vertical="center")
     #
-    #         for row in ws['A1:G2']:
+    #         for row in ws['A1:I2']:
     #             for cell in row:
     #                 cell.border = thick_border
-    #         for row in ws['E3:G3']:
+    #         for row in ws['F3:I3']:
     #             for cell in row:
     #                 cell.border = thick_border
-    #         for row in ws['E4:G4']:
+    #         for row in ws['F4:I4']:
     #             for cell in row:
     #                 cell.border = thick_border
-    #         for row in ws['A3:C4']:
+    #         for row in ws['A3:D4']:
     #             for cell in row:
     #                 cell.border = thick_border
     #
     #         # Установка ширины столбцов
-    #         ws.column_dimensions['A'].width = 30
-    #         ws.column_dimensions['B'].width = 30
-    #         ws.column_dimensions['C'].width = 30
-    #         ws.column_dimensions['D'].width = 30
-    #         ws.column_dimensions['E'].width = 30
-    #         ws.column_dimensions['F'].width = 30
-    #         ws.column_dimensions['G'].width = 30
+    #         ws.column_dimensions['A'].width = 25
+    #         ws.column_dimensions['B'].width = 18
+    #         ws.column_dimensions['C'].width = 12
+    #         ws.column_dimensions['D'].width = 10
+    #
+    #         ws.column_dimensions['E'].width = 15
+    #
+    #         ws.column_dimensions['F'].width = 18
+    #         ws.column_dimensions['G'].width = 25
+    #         ws.column_dimensions['H'].width = 25
+    #         ws.column_dimensions['I'].width = 10
     #
     #         row_start = 5
     #
@@ -566,17 +613,25 @@ if __name__ == '__main__':
     #             cell = ws.cell(row=row_num, column=3, value=row_data[2])
     #             cell.border = thin_border
     #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #             if mode != 'young':
+    #                 cell = ws.cell(row=row_num, column=4, value=row_data[3])
+    #                 cell.border = thin_border
+    #                 cell.alignment = Alignment(horizontal="center", vertical="center")
     #
     #         for row_num, row_data in enumerate(bulls_date, start=row_start):
-    #             cell = ws.cell(row=row_num, column=5, value=row_data[0])
+    #             cell = ws.cell(row=row_num, column=6, value=row_data[0])
     #             cell.border = thin_border
     #             cell.alignment = Alignment(horizontal="center", vertical="center")
     #
-    #             cell = ws.cell(row=row_num, column=6, value=row_data[1])
+    #             cell = ws.cell(row=row_num, column=7, value=row_data[1])
     #             cell.border = thin_border
     #             cell.alignment = Alignment(horizontal="center", vertical="center")
     #
-    #             cell = ws.cell(row=row_num, column=7, value=row_data[2])
+    #             cell = ws.cell(row=row_num, column=8, value=row_data[2])
+    #             cell.border = thin_border
+    #             cell.alignment = Alignment(horizontal="center", vertical="center")
+    #
+    #             cell = ws.cell(row=row_num, column=9, value=row_data[3])
     #             cell.border = thin_border
     #             cell.alignment = Alignment(horizontal="center", vertical="center")
     #
@@ -628,9 +683,9 @@ if __name__ == '__main__':
     #             if row[0]:
     #                 cow_numbers.append(row[0])
     #
-    #         for row in sheet.iter_rows(min_row=5, max_col=4, values_only=True):
-    #             if row[3]:
-    #                 bull_number.append(row[3])
+    #         for row in sheet.iter_rows(min_row=5, max_col=6, values_only=True):
+    #             if row[5]:
+    #                 bull_number.append(row[5])
     #
     #         cow = PK.objects.filter(uniq_key__in=cow_numbers).values_list('uniq_key', flat=True)
     #

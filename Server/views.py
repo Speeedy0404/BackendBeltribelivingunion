@@ -100,3 +100,15 @@ class CowParamsView(APIView):
             return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)
         except json.JSONDecodeError:
             return Response({"error": "Ошибка декодирования JSON."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RatingOfFarms(APIView):
+    def get(self, request, *args, **kwargs):
+        try:
+            data = JsonFarmsData.objects.all().values_list('rating_data', flat=True)
+            return Response({'rating_data': data}, status=status.HTTP_200_OK)
+
+        except FileNotFoundError:
+            return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)
+        except json.JSONDecodeError:
+            return Response({"error": "Ошибка декодирования JSON."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -329,12 +329,15 @@ def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=Non
             user_name = sanitize_filename(user_name)
             xlsx_path = xlsx_path[:-5] + '__' + user_name + xlsx_path[-5:]
 
-        bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka')
+        bulls_date = PKBull.objects.filter(uniq_key__in=bulls).values_list('nomer', 'uniq_key', 'klichka',
+                                                                           'milkproductionindexbull__rm')
 
         if mode != 'young':
-            cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+            cows = PK.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer',
+                                                                    'milkproductionindex__rm').order_by('kodfer')
         else:
-            cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer')
+            cows = PKYoungAnimals.objects.filter(uniq_key__in=cows).values_list('uniq_key', 'nomer', 'kodfer').order_by(
+                'kodfer')
 
         wb = Workbook()
         ws = wb.active
@@ -346,17 +349,17 @@ def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=Non
         thick_border = Border(left=Side(style='thick'), right=Side(style='thick'), top=Side(style='thick'),
                               bottom=Side(style='thick'))
 
-        ws.merge_cells('A1:G2')
+        ws.merge_cells('A1:I2')
         ws['A1'] = name_xlsx
         ws['A1'].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         ws['A1'].font = Font(bold=True)
-        ws.merge_cells('A3:C3')
+        ws.merge_cells('A3:D3')
         ws['A3'] = 'Коровы'
         ws['A3'].alignment = Alignment(horizontal="center", vertical="center")
 
-        ws.merge_cells('E3:G3')
-        ws['E3'] = 'Быки'
-        ws['E3'].alignment = Alignment(horizontal="center", vertical="center")
+        ws.merge_cells('F3:I3')
+        ws['F3'] = 'Быки'
+        ws['F3'].alignment = Alignment(horizontal="center", vertical="center")
 
         ws['A4'] = 'Индивидуальный номер'
         ws['A4'].alignment = Alignment(horizontal="center", vertical="center")
@@ -364,35 +367,43 @@ def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=Non
         ws['B4'].alignment = Alignment(horizontal="center", vertical="center")
         ws['C4'] = 'Код фермы'
         ws['C4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['D4'] = 'RM'
+        ws['D4'].alignment = Alignment(horizontal="center", vertical="center")
 
-        ws['E4'] = 'Рабочий номер'
-        ws['E4'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['F4'] = 'Индивидуальный номер'
+        ws['F4'] = 'Рабочий номер'
         ws['F4'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['G4'] = 'Кличка'
+        ws['G4'] = 'Индивидуальный номер'
         ws['G4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['H4'] = 'Кличка'
+        ws['H4'].alignment = Alignment(horizontal="center", vertical="center")
+        ws['I4'] = 'RM'
+        ws['I4'].alignment = Alignment(horizontal="center", vertical="center")
 
-        for row in ws['A1:G2']:
+        for row in ws['A1:I2']:
             for cell in row:
                 cell.border = thick_border
-        for row in ws['E3:G3']:
+        for row in ws['F3:I3']:
             for cell in row:
                 cell.border = thick_border
-        for row in ws['E4:G4']:
+        for row in ws['F4:I4']:
             for cell in row:
                 cell.border = thick_border
-        for row in ws['A3:C4']:
+        for row in ws['A3:D4']:
             for cell in row:
                 cell.border = thick_border
 
         # Установка ширины столбцов
-        ws.column_dimensions['A'].width = 30
-        ws.column_dimensions['B'].width = 30
-        ws.column_dimensions['C'].width = 30
-        ws.column_dimensions['D'].width = 30
-        ws.column_dimensions['E'].width = 30
-        ws.column_dimensions['F'].width = 30
-        ws.column_dimensions['G'].width = 30
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 12
+        ws.column_dimensions['D'].width = 10
+
+        ws.column_dimensions['E'].width = 15
+
+        ws.column_dimensions['F'].width = 18
+        ws.column_dimensions['G'].width = 25
+        ws.column_dimensions['H'].width = 25
+        ws.column_dimensions['I'].width = 10
 
         row_start = 5
 
@@ -408,17 +419,25 @@ def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=Non
             cell = ws.cell(row=row_num, column=3, value=row_data[2])
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
+            if mode != 'young':
+                cell = ws.cell(row=row_num, column=4, value=row_data[3])
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal="center", vertical="center")
 
         for row_num, row_data in enumerate(bulls_date, start=row_start):
-            cell = ws.cell(row=row_num, column=5, value=row_data[0])
+            cell = ws.cell(row=row_num, column=6, value=row_data[0])
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            cell = ws.cell(row=row_num, column=6, value=row_data[1])
+            cell = ws.cell(row=row_num, column=7, value=row_data[1])
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-            cell = ws.cell(row=row_num, column=7, value=row_data[2])
+            cell = ws.cell(row=row_num, column=8, value=row_data[2])
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            cell = ws.cell(row=row_num, column=9, value=row_data[3])
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
