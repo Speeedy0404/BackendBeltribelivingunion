@@ -1,3 +1,5 @@
+import sys
+import os
 import numpy as np
 from ..models import PK, Farms
 from collections import Counter
@@ -6,6 +8,10 @@ from scipy.stats import gaussian_kde
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from ..serializers import IndividualPinSerializer
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from fields import MAPPING
 
 
 def get_density(object_with_data):
@@ -101,6 +107,13 @@ def create_data(ids):
     return results
 
 
+def mapping_label(group_list):
+    for item in group_list:
+        param_name = item['param']
+        item['param'] = MAPPING[param_name]
+    return group_list
+
+
 class IndividualPinView(APIView):
 
     def post(self, request):
@@ -111,46 +124,34 @@ class IndividualPinView(APIView):
             try:
                 farm = Farms.objects.get(korg=farm_code, norg=farm_name)
 
-                if farm.jsonfarmsdata.parameter_forecasting is None:
-                    parameter_forecasting = {
-                        'tip': 0,
-                        'kt': 0,
-                        'rost': 0,
-                        'gt': 0,
-                        'pz': 0,
-                        'shz': 0,
-                        'pzkb': 0,
-                        'pzkz': 0,
-                        'sust': 0,
-                        'pzkop': 0,
-                        'gv': 0,
-                        'pdv': 0,
-                        'vzcv': 0,
-                        'szcv': 0,
-                        'csv': 0,
-                        'rps': 0,
-                        'rzs': 0,
-                        'ds': 0,
+                lactation_data = [
+                    farm.jsonfarmsdata.aggregated_data["aggregated_data"]["lak_one"],
+                    farm.jsonfarmsdata.aggregated_data["aggregated_data"]["lak_two"],
+                    farm.jsonfarmsdata.aggregated_data["aggregated_data"]["lak_three"]
+                ]
+                aggregated_data = farm.jsonfarmsdata.aggregated_data["aggregated_data"]
 
-                        'milk': 0,
-                        'fkg': 0,
-                        'fprc': 0,
-                        'pkg': 0,
-                        'pprc': 0,
+                forecasting_1 = aggregated_data["forecasting_section_one"]
+                forecasting_1 = mapping_label(forecasting_1)
+                forecasting_2 = aggregated_data["forecasting_section_two"]
+                forecasting_2 = mapping_label(forecasting_2)
+                forecasting_3 = aggregated_data["forecasting_section_three"]
+                forecasting_3 = mapping_label(forecasting_3)
+                forecasting_4 = aggregated_data["forecasting_section_four"]
+                forecasting_4 = mapping_label(forecasting_4)
 
-                        'crh': 0,
-                        'ctfi': 0,
-                        'do': 0,
-
-                        'scs': 0
-                    }
-                else:
-                    parameter_forecasting = farm.jsonfarmsdata.parameter_forecasting["parameter_forecasting"]
+                table_one = mapping_label(aggregated_data["breeding_value_of_milk_productivity"])
+                table_two = mapping_label(aggregated_data["relative_breeding_value_of_milk_productivity"])
 
                 result_data = {
-                    'aggregated_data': farm.jsonfarmsdata.aggregated_data["aggregated_data"],
+                    'lactation_data': lactation_data,
+                    'breeding_value_of_milk_productivity': table_one,
+                    'relative_breeding_value_of_milk_productivity': table_two,
+                    'forecasting_1': forecasting_1,
+                    'forecasting_2': forecasting_2,
+                    'forecasting_3': forecasting_3,
+                    'forecasting_4': forecasting_4,
                     'density_data': farm.jsonfarmsdata.chart_data["char_data"],
-                    'parameter_forecasting': parameter_forecasting,
                 }
 
                 return Response(result_data, status=status.HTTP_200_OK)

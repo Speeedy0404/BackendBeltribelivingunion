@@ -12,7 +12,8 @@ from ..models import Farms, PK, PKYoungAnimals, Parentage, PKBull, Report
 from reportlab.lib import colors
 from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase.ttfonts import TTFont, pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase import pdfmetrics
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Image, Spacer, KeepTogether
 
@@ -20,9 +21,9 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, Border, Side, PatternFill
 
 REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
-ICON_PATH = os.path.join(settings.BASE_DIR, 'image\\dna.png')
-FONT_PATH = os.path.join(settings.BASE_DIR, 'text\\DejaVuSans.ttf')
-FONT_BOLD_PATH = os.path.join(settings.BASE_DIR, 'text\\DejaVuSans-Bold.ttf')
+ICON_PATH = os.path.join(settings.BASE_DIR, 'image/dna.png')
+FONT_PATH = os.path.join(settings.BASE_DIR, 'text/DejaVuSans.ttf')
+FONT_BOLD_PATH = os.path.join(settings.BASE_DIR, 'text/DejaVuSans-Bold.ttf')
 
 
 def perform_consolidation(cows, mod):
@@ -118,7 +119,7 @@ def get_ancestors_for_animals(animals, mode='bull', generations=3):
 
 def check_inbreeding(bulls, cows, mode):
     """Функция проверяет на инбридинг для списка быков и коров"""
-    results = []
+    results = {}
 
     ancestry_bull, not_full_bull = get_ancestors_for_animals(bulls)
     ancestry_cow, not_full_cow = get_ancestors_for_animals(cows, mode)
@@ -129,8 +130,28 @@ def check_inbreeding(bulls, cows, mode):
                 for cow_level, cow_ancestors in cow_tree.items():
                     common_ancestors = set(bull_ancestors) & set(cow_ancestors)
                     if common_ancestors:
-                        results.append({
-                            'bull': bull,
+                        if bull not in results:
+                            try:
+                                bull_data = PKBull.objects.get(uniq_key=bull)
+                                nomer = bull_data.nomer
+                                klichka = bull_data.klichka
+                            except PKBull.DoesNotExist:
+                                nomer = ''
+                                klichka = ''
+                            except KeyError:
+                                nomer = ''
+                                klichka = ''
+                            except Exception as e:
+                                nomer = ''
+                                klichka = ''
+                                print(f"Произошла ошибка: {e}")
+                            results[bull] = {
+                                'bull': bull,
+                                'nomer': nomer,  # Функция для получения номера
+                                'klichka': klichka,  # Функция для получения клички
+                                'inbreeding_cases': []
+                            }
+                        results[bull]['inbreeding_cases'].append({
                             'cow': cow,
                             'bull_level': bull_level,
                             'cow_level': cow_level,
@@ -138,31 +159,15 @@ def check_inbreeding(bulls, cows, mode):
                         })
 
     if len(results) < 1:
-        results.append('Нет инбредных животных')
+        return ['Нет инбредных животных']
 
-    not_full_cow.extend(not_full_bull)
-
-    print(len(not_full_bull))
-    print(len(not_full_cow))
-
-    if results[0] != 'Нет инбредных животных':
-        for item in results:
-            try:
-                bull = PKBull.objects.get(uniq_key=item['bull'])
-                item['nomer'] = bull.nomer
-                item['klichka'] = bull.klichka
-            except PKBull.DoesNotExist:
-                item['nomer'] = ''
-                item['klichka'] = ''
-            except KeyError:
-                item['nomer'] = ''
-                item['klichka'] = ''
-            except Exception as e:
-                item['nomer'] = ''
-                item['klichka'] = ''
-                print(f"Произошла ошибка: {e}")
-
-    return results
+    # not_full_cow.extend(not_full_bull)
+    #
+    # print(len(not_full_bull))
+    # print(len(not_full_cow))
+    #
+    # print(list(results.values()))
+    return list(results.values())
 
 
 def sanitize_filename(name):
@@ -464,7 +469,6 @@ class ConsolidationView(APIView):
             mod = self.request.headers.get('Mode')
         except Farms.DoesNotExist:
             return Response({"error": "Ферма не найдена."}, status=status.HTTP_404_NOT_FOUND)
-
         try:
             if mod == 'standard':
                 inbreeding_results = check_inbreeding(bulls, cows, mode)
@@ -473,20 +477,12 @@ class ConsolidationView(APIView):
                         "inbreeding_check": True,
                     }, status=status.HTTP_200_OK)
                 else:
-                    bull_inbred_counts = defaultdict(set)
-
-                    for result in inbreeding_results:
-                        bull = result['bull']
-                        cow = result['cow']
-                        bull_inbred_counts[bull].add(cow)
-
                     response_data = []
-                    for bull, cows in bull_inbred_counts.items():
+                    for element in inbreeding_results:
                         response_data.append({
-                            "bull": bull,
-                            "inbred_cows_count": len(cows)
+                            "bull": element['bull'],
+                            "inbred_cows_count": len(element['inbreeding_cases']),
                         })
-
                     return Response({
                         "inbreeding_check": False,
                         "inbred_animals": inbreeding_results,
@@ -523,7 +519,11 @@ class ConsolidationView(APIView):
                 }, status=status.HTTP_200_OK)
             elif mod == "Without":
                 without = data['inbred']
-                cows_to_remove = {entry['cow'] for entry in without}
+                cows_to_remove = [
+                    case['cow']
+                    for entry in without
+                    for case in entry.get('inbreeding_cases', [])
+                ]
                 filtered_cows = [cow for cow in cows if cow not in cows_to_remove]
                 perform_consolidation(filtered_cows, mode)
                 if user_name:

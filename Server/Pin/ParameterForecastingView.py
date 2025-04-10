@@ -1,5 +1,5 @@
 import os
-
+import sys
 from django.conf import settings
 from openpyxl import load_workbook
 from rest_framework.views import APIView
@@ -10,10 +10,14 @@ from ..models import Farms, PK, PKYoungAnimals, PKBull, Report, JsonFarmsData
 from ..serializers import CowParameterForecastingSerializer, BullParameterForecastingSerializer
 
 REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from fields import MAPPING
 
 
-def calculate_weighted_average(bull_data, index_type):
+def calculate_weighted_average(bull_data, index_type, number):
     total_ebv_rel = {}
+    total_ebv = {}
     total_rel = {}
 
     for bull in bull_data:
@@ -30,19 +34,25 @@ def calculate_weighted_average(bull_data, index_type):
                         continue
 
                     ebv_rel_value = value * (rel_value / 100)
+                    ebv_value = value
 
                     if parameter not in total_ebv_rel:
                         total_ebv_rel[parameter] = 0
+                        total_ebv[parameter] = 0
                         total_rel[parameter] = 0
+
                     total_ebv_rel[parameter] += ebv_rel_value
+                    total_ebv[parameter] += ebv_value
                     total_rel[parameter] += 1
 
     if len(total_ebv_rel) == 0 or len(total_rel) == 0:
-        return {'param': 0}
+        return {'param': 0}, {'param': 0}
     else:
         average_values = {parameter: total_ebv_rel[parameter] / total_rel[parameter] for parameter in total_ebv_rel}
-
-    return average_values
+        average_bull = {parameter.split('_')[-1]: (total_ebv[parameter] / total_rel[parameter]) * number for parameter
+                        in
+                        total_ebv}
+    return average_values, average_bull
 
 
 def calculate_weighted_average_with_bulls(cow_data, averages, index_type):
@@ -99,11 +109,40 @@ def count_valid_conformationindex(params_list):
     return count
 
 
-def calculate_difference(current, forecasting):
-    result = {}
-    for key in current:
-        result[key] = forecasting.get(key, 0) - current[key]
-    return result
+def set_predict(current, forecasting, avg_dict):
+    for element in current:
+        key = element['param']
+        element['predict'] = forecasting.get(key, 0)
+        element['bull_superiority'] = avg_dict.get(key, 0) - element['avg']
+    return current
+
+
+def set_predict_null(data):
+    for element in data:
+        if element['param'] != 0:
+            element['predict'] = 0
+            element['bull_superiority'] = 0
+    return data
+
+
+def mapping_label(group_list):
+    for item in group_list:
+        param_name = item['param']
+        item['param'] = MAPPING[param_name]
+    return group_list
+
+
+def get_weighted_avg_bull(avg_values, count_cows):
+    bull_averages = {}
+    for element in avg_values:
+        for sub_element in element:
+            for key, value in sub_element.items():
+                if key not in bull_averages:
+                    bull_averages[key] = 0
+                bull_averages[key] += value
+    for key, value in bull_averages.items():
+        bull_averages[key] = value / count_cows
+    return bull_averages
 
 
 class ParameterForecastingView(APIView):
@@ -112,79 +151,29 @@ class ParameterForecastingView(APIView):
             cows_param = []
             cow_numbers = []
             bull_numbers = []
-
+            avg_values = []
+            count_cows = 0
             farm = Farms.objects.get(korg=self.request.headers.get('Kodrn'))
             paths = Report.objects.filter(title__icontains=farm.norg).values_list('path', flat=True)
+            aggregated_data = farm.jsonfarmsdata.aggregated_data['aggregated_data']
 
             if len(paths) == 0:
-                if farm.jsonfarmsdata.parameter_forecasting is None:
-                    pass
-                else:
-                    farm.jsonfarmsdata.parameter_forecasting = {'parameter_forecasting': {
-                        'tip': 0,
-                        'kt': 0,
-                        'rost': 0,
-                        'gt': 0,
-                        'pz': 0,
-                        'shz': 0,
-                        'pzkb': 0,
-                        'pzkz': 0,
-                        'sust': 0,
-                        'pzkop': 0,
-                        'gv': 0,
-                        'pdv': 0,
-                        'vzcv': 0,
-                        'szcv': 0,
-                        'csv': 0,
-                        'rps': 0,
-                        'rzs': 0,
-                        'ds': 0,
-
-                        'milk': 0,
-                        'fkg': 0,
-                        'fprc': 0,
-                        'pkg': 0,
-                        'pprc': 0,
-
-                        'crh': 0,
-                        'ctfi': 0,
-                        'do': 0,
-
-                        'scs': 0
-                    }}
-                    farm.jsonfarmsdata.save()
-                return Response({'parameter_forecasting': {
-                    'tip': 0,
-                    'kt': 0,
-                    'rost': 0,
-                    'gt': 0,
-                    'pz': 0,
-                    'shz': 0,
-                    'pzkb': 0,
-                    'pzkz': 0,
-                    'sust': 0,
-                    'pzkop': 0,
-                    'gv': 0,
-                    'pdv': 0,
-                    'vzcv': 0,
-                    'szcv': 0,
-                    'csv': 0,
-                    'rps': 0,
-                    'rzs': 0,
-                    'ds': 0,
-
-                    'milk': 0,
-                    'fkg': 0,
-                    'fprc': 0,
-                    'pkg': 0,
-                    'pprc': 0,
-
-                    'crh': 0,
-                    'ctfi': 0,
-                    'do': 0,
-
-                    'scs': 0
-                }, }, status=status.HTTP_200_OK)
+                forecasting_1 = set_predict_null(aggregated_data['forecasting_section_one'])
+                forecasting_2 = set_predict_null(aggregated_data['forecasting_section_two'])
+                forecasting_3 = set_predict_null(aggregated_data['forecasting_section_three'])
+                forecasting_4 = set_predict_null(aggregated_data['forecasting_section_four'])
+                farm.jsonfarmsdata.save()
+                forecasting_1 = mapping_label(forecasting_1)
+                forecasting_2 = mapping_label(forecasting_2)
+                forecasting_3 = mapping_label(forecasting_3)
+                forecasting_4 = mapping_label(forecasting_4)
+                result_data = {
+                    'forecasting_data_one': forecasting_1,
+                    'forecasting_data_two': forecasting_2,
+                    'forecasting_data_thee': forecasting_3,
+                    'forecasting_data_four': forecasting_4,
+                }
+                return Response(result_data, status=status.HTTP_200_OK)
 
             new_paths = [path + ".xlsx" for path in paths]
             directory_path = new_paths[0].split('__')[0][:-16]
@@ -216,6 +205,8 @@ class ParameterForecastingView(APIView):
                         'somaticcellindex',
                     ).order_by('id')
 
+                    number = queryset.count()
+                    count_cows += number
                     serializer = CowParameterForecastingSerializer(queryset, many=True)
                     cow_data = serializer.data
 
@@ -229,11 +220,15 @@ class ParameterForecastingView(APIView):
                     serializer = BullParameterForecastingSerializer(queryset, many=True)
                     bull_data = serializer.data
 
-                    average_conformation = calculate_weighted_average(bull_data, 'conformationindexbull')
-                    average_milk = calculate_weighted_average(bull_data, 'milkproductionindexbull')
-                    average_reproduction = calculate_weighted_average(bull_data, 'reproductionindexbull')
-                    average_somaticcell = calculate_weighted_average(bull_data, 'somaticcellindexbull')
+                    average_conformation, avg_conf = calculate_weighted_average(bull_data, 'conformationindexbull',
+                                                                                number)
+                    average_milk, avg_milk = calculate_weighted_average(bull_data, 'milkproductionindexbull', number)
+                    average_reproduction, avg_reprod = calculate_weighted_average(bull_data, 'reproductionindexbull',
+                                                                                  number)
+                    average_somaticcell, avg_somatic = calculate_weighted_average(bull_data, 'somaticcellindexbull',
+                                                                                  number)
 
+                    avg_values.append([avg_conf, avg_milk, avg_reprod, avg_somatic])
                     cows = calculate_weighted_average_with_bulls(cow_data,
                                                                  [average_conformation, average_milk,
                                                                   average_reproduction,
@@ -244,6 +239,7 @@ class ParameterForecastingView(APIView):
                     cows_param.extend(cows)
                 else:
                     pass
+            avg_dict = get_weighted_avg_bull(avg_values, count_cows)
 
             forecasting = {
                 'tip': calculate_average(cows_param, 'conformationindex', 'ebv_tip'),
@@ -277,107 +273,24 @@ class ParameterForecastingView(APIView):
 
                 'scs': calculate_average(cows_param, 'somaticcellindex', 'ebv_scs'),
             }
-            current = {
-                'tip': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_tip") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_tip", 0),
-                'kt': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_kt") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf",
-                                                                                                                 {}).get(
-                    "avg_ebv_kt", 0),
-                'rost': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_rost") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_rost", 0),
-                'gt': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_gt") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf",
-                                                                                                                 {}).get(
-                    "avg_ebv_gt", 0),
-                'pz': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_pz") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf",
-                                                                                                                 {}).get(
-                    "avg_ebv_pz", 0),
-                'shz': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_shz") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_shz", 0),
-                'pzkb': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_pzkb") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_pzkb", 0),
-                'pzkz': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_pzkz") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_pzkz", 0),
-                'sust': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_sust") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_sust", 0),
-                'pzkop': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_pzkop") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_pzkop", 0),
-                'gv': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_gv") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf",
-                                                                                                                 {}).get(
-                    "avg_ebv_gv", 0),
-                'pdv': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_pdv") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_pdv", 0),
-                'vzcv': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_vzcv") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_vzcv", 0),
-                'szcv': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_szcv") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_szcv", 0),
-                'csv': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_csv") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_csv", 0),
-                'rps': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_rps") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_rps", 0),
-                'rzs': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_rzs") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "conf", {}).get("avg_ebv_rzs", 0),
-                'ds': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf", {}).get(
-                    "avg_ebv_ds") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("conf",
-                                                                                                                 {}).get(
-                    "avg_ebv_ds", 0),
 
-                'milk': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("milk", {}).get(
-                    "avg_ebv_milk") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "milk", {}).get("avg_ebv_milk", 0),
-                'fkg': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("milk", {}).get(
-                    "avg_ebv_fkg") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "milk", {}).get("avg_ebv_fkg", 0),
-                'fprc': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("milk", {}).get(
-                    "avg_ebv_fprc") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "milk", {}).get("avg_ebv_fprc", 0),
-                'pkg': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("milk", {}).get(
-                    "avg_ebv_pkg") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "milk", {}).get("avg_ebv_pkg", 0),
-                'pprc': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("milk", {}).get(
-                    "avg_ebv_pprc") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "milk", {}).get("avg_ebv_pprc", 0),
-
-                'crh': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("reprod", {}).get(
-                    "avg_ebv_crh") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "reprod", {}).get("avg_ebv_crh", 0),
-                'ctfi': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("reprod", {}).get(
-                    "avg_ebv_ctfi") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "reprod", {}).get("avg_ebv_ctfi", 0),
-                'do': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("reprod", {}).get(
-                    "avg_ebv_do") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get(
-                    "reprod", {}).get("avg_ebv_do", 0),
-
-                'scs': 0 if farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("scs", {}).get(
-                    "avg_ebv_scs") is None else farm.jsonfarmsdata.aggregated_data.get("aggregated_data", {}).get("scs",
-                                                                                                                  {}).get(
-                    "avg_ebv_scs", 0),
-            }
-
-            result = calculate_difference(current, forecasting)
-
-            farm.jsonfarmsdata.parameter_forecasting = {'parameter_forecasting': result}
+            forecasting_1 = set_predict(aggregated_data['forecasting_section_one'], forecasting, avg_dict)
+            forecasting_2 = set_predict(aggregated_data['forecasting_section_two'], forecasting, avg_dict)
+            forecasting_3 = set_predict(aggregated_data['forecasting_section_three'], forecasting, avg_dict)
+            forecasting_4 = set_predict(aggregated_data['forecasting_section_four'], forecasting, avg_dict)
             farm.jsonfarmsdata.save()
+            forecasting_1 = mapping_label(forecasting_1)
+            forecasting_2 = mapping_label(forecasting_2)
+            forecasting_3 = mapping_label(forecasting_3)
+            forecasting_4 = mapping_label(forecasting_4)
 
             result_data = {
-                'parameter_forecasting': result,
+                'forecasting_data_one': forecasting_1,
+                'forecasting_data_two': forecasting_2,
+                'forecasting_data_thee': forecasting_3,
+                'forecasting_data_four': forecasting_4,
             }
+
             return Response(result_data, status=status.HTTP_200_OK)
         except Farms.DoesNotExist:
             return Response({"error": "Проблема с данными"}, status=status.HTTP_400_BAD_REQUEST)

@@ -146,6 +146,44 @@ class PKYoungAnimalsSerializerData(serializers.ModelSerializer):
             }
 
 
+class PKYoungAnimalsFlatSerializer(serializers.ModelSerializer):
+    father_lin_name = serializers.SerializerMethodField()
+    father_kompleks = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PKYoungAnimals
+        fields = ['id', 'uniq_key', 'datarojd', 'father_lin_name', 'father_kompleks', 'consolidation']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Предзагрузка данных о родителях
+        cow_ids = [obj.uniq_key for obj in self.instance]
+        parent_keys = PKYoungAnimals.objects.filter(uniq_key__in=cow_ids).values_list('uniq_key', 'f_regnomer')
+        parent_dict = {uniq_key: f_regnomer for uniq_key, f_regnomer in parent_keys}
+
+        bull_keys = PKBull.objects.filter(
+            uniq_key__in=[f_regnomer for uniq_key, f_regnomer in parent_keys]).select_related('lin')
+        bull_dict = {bull.uniq_key: bull for bull in bull_keys}
+
+        self.parent_dict = parent_dict
+        self.bull_dict = bull_dict
+
+    def get_father_lin_name(self, obj):
+        parent_key = self.parent_dict.get(obj.uniq_key)
+        bull_info = self.bull_dict.get(parent_key)
+
+        # Проверка на наличие данных и возвращение нужного значения
+        return bull_info.lin.abbreviated_branch_name if bull_info else ''
+
+    def get_father_kompleks(self, obj):
+        parent_key = self.parent_dict.get(obj.uniq_key)
+        bull_info = self.bull_dict.get(parent_key)
+
+        # Проверка на наличие данных и возвращение нужного значения
+        return bull_info.kompleks if bull_info else ''
+
+
 class PKSerializerData(serializers.ModelSerializer):
     milkproductionindex = CowListMilkProductionIndexSerializer()
     conformationindex = CowConformationIndexSerializer()
@@ -210,7 +248,7 @@ class PKBullSerializer(serializers.ModelSerializer):
 class AnimalFindSerializer(serializers.ModelSerializer):
     class Meta:
         model = PKBull
-        fields = ['nomer', 'klichka', 'uniq_key']
+        fields = ['pk', 'nomer', 'klichka', 'uniq_key']
 
 
 class InfoMilkProductionIndexSerializer(serializers.ModelSerializer):
@@ -274,7 +312,7 @@ class GetAnimalSerializer(serializers.ModelSerializer):
 class AnimalCowFindSerializer(serializers.ModelSerializer):
     class Meta:
         model = PK
-        fields = ['nomer', 'uniq_key']
+        fields = ['pk', 'nomer', 'uniq_key']
 
 
 class CowInfoMilkProductionIndexSerializer(serializers.ModelSerializer):
@@ -378,19 +416,14 @@ class AggregatedDataSerializer(serializers.Serializer):
     lak_one = serializers.DictField(read_only=True)
     lak_two = serializers.DictField(read_only=True)
     lak_three = serializers.DictField(read_only=True)
-    milk = serializers.DictField(read_only=True)
-    median_milk = serializers.DictField(read_only=True)
-    conf = serializers.DictField(read_only=True)
-    median_conf = serializers.DictField(read_only=True)
-    reprod = serializers.DictField(read_only=True)
-    reprod_median = serializers.DictField(read_only=True)
-    scs = serializers.DictField(read_only=True)
-    median_scs = serializers.DictField(read_only=True)
-    com = serializers.DictField(read_only=True)
-    median_com = serializers.DictField(read_only=True)
+    relative_breeding_value_of_milk_productivity = serializers.DictField(read_only=True)
+    breeding_value_of_milk_productivity = serializers.DictField(read_only=True)
+    forecasting_section_one = serializers.DictField(read_only=True)
+    forecasting_section_two = serializers.DictField(read_only=True)
+    forecasting_section_three = serializers.DictField(read_only=True)
+    forecasting_section_four = serializers.DictField(read_only=True)
 
     def get_lak_values(self, number, ids):
-
         average_values = LAK.objects.filter(
             pk_cattle__in=ids,
             nomlak=number
@@ -436,6 +469,7 @@ class AggregatedDataSerializer(serializers.Serializer):
         protein_percentage = (sum_b305kg / sum_u305_b) * 100 if sum_u305_b else 0
 
         return {
+            'lak': number,
             'avg_u305': average_values['avg_u305'],
             'count_u305': average_values['count_u305'],
             'avg_j305kg': avg_j305kg,
@@ -444,25 +478,58 @@ class AggregatedDataSerializer(serializers.Serializer):
             'protein_percentage': protein_percentage
         }
 
-    def get_values_of_data(self, ids, fields, model):
-        queryset = model.objects.filter(pk_cattle__in=ids).values_list(*fields)
+    def get_values_of_data(self, ids, fields, models):
 
-        aggregation_params = {}
-        for field in fields:
-            aggregation_params[f'count_{field}'] = Count(field, filter=Q(**{f"{field}__isnull": False}))
-            aggregation_params[f'avg_{field}'] = Avg(field, filter=Q(**{f"{field}__isnull": False}))
-            aggregation_params[f'min_{field}'] = Min(field, filter=Q(**{f"{field}__isnull": False}))
-            aggregation_params[f'max_{field}'] = Max(field, filter=Q(**{f"{field}__isnull": False}))
-            aggregation_params[f'stddev_{field}'] = StdDev(field, filter=Q(**{f"{field}__isnull": False}))
+        all_data = []
+        counter = 0
 
-        average_values = queryset.aggregate(**aggregation_params)
+        for model in models:
+            data = fields[counter]
+            counter += 1
 
-        median_values = {}
-        for field in fields:
-            values = queryset.filter(**{f"{field}__isnull": False}).values_list(field, flat=True)
-            median_values[f'median_{field}'] = np.median(values) if values else None
+            queryset = model.objects.filter(pk_cattle__in=ids).values_list(*data)
+            for field in data:
+                aggregation_params = {}
+                aggregation_params[f'count'] = Count(field, filter=Q(**{f"{field}__isnull": False}))
+                aggregation_params[f'avg'] = Avg(field, filter=Q(**{f"{field}__isnull": False}))
+                aggregation_params[f'min'] = Min(field, filter=Q(**{f"{field}__isnull": False}))
+                aggregation_params[f'max'] = Max(field, filter=Q(**{f"{field}__isnull": False}))
+                aggregation_params[f'stddev'] = StdDev(field, filter=Q(**{f"{field}__isnull": False}))
 
-        return average_values, median_values
+                average_values = queryset.aggregate(**aggregation_params)
+
+                if field.split('_')[-1] in ['milk', 'fprc', 'pprc']:
+                    average_values[f'param'] = field
+                else:
+                    average_values[f'param'] = field.split('_')[-1]
+
+                values = queryset.filter(**{f"{field}__isnull": False}).values_list(field, flat=True)
+                average_values[f'median'] = np.median(values) if values else None
+
+                all_data.append(average_values)
+
+        return all_data
+
+    def get_values_of_data_forecasting(self, ids, fields, models):
+
+        all_data = []
+        counter = 0
+
+        for model in models:
+            data = fields[counter]
+            counter += 1
+
+            queryset = model.objects.filter(pk_cattle__in=ids).values_list(*data)
+            for field in data:
+                aggregation_params = {}
+                aggregation_params[f'avg'] = Avg(field, filter=Q(**{f"{field}__isnull": False}))
+                average_values = queryset.aggregate(**aggregation_params)
+                average_values[f'param'] = field.split('_')[-1]
+                average_values[f'bull_superiority'] = 0
+                average_values[f'predict'] = 0
+                all_data.append(average_values)
+
+        return all_data
 
     def to_representation(self, validated_data):
         cow_ids = validated_data.get('cow_ids')
@@ -470,48 +537,72 @@ class AggregatedDataSerializer(serializers.Serializer):
         lak_one = self.get_lak_values(1, cow_ids)
         lak_two = self.get_lak_values(2, cow_ids)
         lak_three = self.get_lak_values(3, cow_ids)
-        milk, median_milk = self.get_values_of_data(
+
+        # ['ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc', 'rbv_milk', 'rbv_fprc', 'rbv_pprc', 'rm'],
+        # MilkProductionIndex
+
+        relative_breeding_value_of_milk_productivity = self.get_values_of_data(
             cow_ids,
-            ['ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc', 'rbv_milk', 'rbv_fprc', 'rbv_pprc', 'rm'],
-            MilkProductionIndex
+            [
+                ['rbvt', 'rbvf', 'rbvu', 'rc'],
+                ['rbv_crh', 'rbv_ctfi', 'rbv_do', 'rf'],
+                ['pi'],
+                ['rscs']
+            ],
+            [ConformationIndex, ReproductionIndex, ComplexIndex, SomaticCellIndex]
         )
-        conf, median_conf = self.get_values_of_data(
+
+        breeding_value_of_milk_productivity = self.get_values_of_data(
             cow_ids,
-            ['ebv_tip', 'ebv_kt', 'ebv_rost', 'ebv_gt', 'ebv_pz', 'ebv_shz', 'ebv_pzkb', 'ebv_pzkz', 'ebv_sust',
-             'ebv_pzkop', 'ebv_gv', 'ebv_pdv', 'ebv_vzcv', 'ebv_szcv', 'ebv_csv', 'ebv_rps', 'ebv_rzs', 'ebv_ds',
-             'rbvt', 'rbvf', 'rbvu', 'rc'],
-            ConformationIndex
+            [
+                ['ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc', 'rbv_milk',
+                 'rbv_fprc', 'rbv_pprc', 'rm']
+            ],
+            [MilkProductionIndex]
         )
-        reprod, reprod_median = self.get_values_of_data(
+        forecasting_section_one = self.get_values_of_data_forecasting(
             cow_ids,
-            ['rbv_crh', 'rbv_ctfi', 'rbv_do', 'ebv_crh', 'ebv_ctfi', 'ebv_do', 'rf'],
-            ReproductionIndex
+            [
+                ['ebv_milk', 'ebv_fprc', 'ebv_pprc', 'ebv_fkg', 'ebv_pkg']
+            ],
+            [MilkProductionIndex]
         )
-        scs, median_scs = self.get_values_of_data(
+        forecasting_section_two = self.get_values_of_data_forecasting(
             cow_ids,
-            ['ebv_scs', 'rscs'],
-            SomaticCellIndex
+            [
+                ['ebv_crh', 'ebv_ctfi', 'ebv_do', ],
+                ['ebv_scs']
+            ],
+            [ReproductionIndex, SomaticCellIndex]
         )
-        com, median_com = self.get_values_of_data(
+        forecasting_section_three = self.get_values_of_data_forecasting(
             cow_ids,
-            ['pi'],
-            ComplexIndex
+            [
+                ['ebv_tip', 'ebv_kt', 'ebv_rost', 'ebv_gt', 'ebv_pz', 'ebv_shz', 'ebv_pzkb',
+                 'ebv_pzkz', 'ebv_sust']
+
+            ],
+            [ConformationIndex]
+        )
+        forecasting_section_four = self.get_values_of_data_forecasting(
+            cow_ids,
+            [
+                ['ebv_pzkop', 'ebv_gv', 'ebv_pdv', 'ebv_vzcv', 'ebv_szcv', 'ebv_csv', 'ebv_rps',
+                 'ebv_rzs', 'ebv_ds']
+            ],
+            [ConformationIndex]
         )
 
         return {
             'lak_one': lak_one,
             'lak_two': lak_two,
             'lak_three': lak_three,
-            'milk': milk,
-            'median_milk': median_milk,
-            'conf': conf,
-            'median_conf': median_conf,
-            'reprod': reprod,
-            'reprod_median': reprod_median,
-            'scs': scs,
-            'median_scs': median_scs,
-            'com': com,
-            'median_com': median_com
+            'relative_breeding_value_of_milk_productivity': relative_breeding_value_of_milk_productivity,
+            'breeding_value_of_milk_productivity': breeding_value_of_milk_productivity,
+            'forecasting_section_one': forecasting_section_one,
+            'forecasting_section_two': forecasting_section_two,
+            'forecasting_section_three': forecasting_section_three,
+            'forecasting_section_four': forecasting_section_four
         }
 
 
@@ -549,6 +640,47 @@ class BullIndividualSerializer(serializers.ModelSerializer):
         model = PKBull
         fields = ['id', 'datarojd', 'uniq_key', 'nomer', 'kompleks', 'milkproductionindexbull', 'conformationindexbull',
                   'reproductionindexbull', 'complexindexbull', 'sperma']
+
+
+class BullIndividualFlatSerializer(serializers.ModelSerializer):
+    rm = serializers.SerializerMethodField()
+    rbvt = serializers.SerializerMethodField()
+    rbvf = serializers.SerializerMethodField()
+    rbvu = serializers.SerializerMethodField()
+    rc = serializers.SerializerMethodField()
+    rf = serializers.SerializerMethodField()
+    pi = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PKBull
+        fields = [
+            'id', 'datarojd', 'uniq_key', 'nomer', 'kompleks', 'sperma',
+            'rm',
+            'rbvt', 'rbvf', 'rbvu', 'rc',
+            'rf',
+            'pi',
+        ]
+
+    def get_rm(self, obj):
+        return getattr(obj.milkproductionindexbull, 'rm', '') if hasattr(obj, 'milkproductionindexbull') else ''
+
+    def get_rbvt(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvt', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rbvf(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvf', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rbvu(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvu', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rc(self, obj):
+        return getattr(obj.conformationindexbull, 'rc', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rf(self, obj):
+        return getattr(obj.reproductionindexbull, 'rf', '') if hasattr(obj, 'reproductionindexbull') else ''
+
+    def get_pi(self, obj):
+        return getattr(obj.complexindexbull, 'pi', '') if hasattr(obj, 'complexindexbull') else ''
 
 
 class BullIndividualAvgSerializer(serializers.Serializer):
@@ -644,58 +776,63 @@ class CowIndividualSerializer(serializers.ModelSerializer):
             }
 
 
-class CowIndividualAvgSerializer(serializers.Serializer):
-    cow_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True
-    )
+class CowIndividualFlatSerializer(serializers.ModelSerializer):
+    rm = serializers.SerializerMethodField()
+    rbvt = serializers.SerializerMethodField()
+    rbvf = serializers.SerializerMethodField()
+    rbvu = serializers.SerializerMethodField()
+    rf = serializers.SerializerMethodField()
+    pi = serializers.SerializerMethodField()
 
-    milk = serializers.DictField(read_only=True)
-    conf = serializers.DictField(read_only=True)
-    reprod = serializers.DictField(read_only=True)
-    com = serializers.DictField(read_only=True)
+    rc = serializers.SerializerMethodField()
+    kompleks = serializers.SerializerMethodField()
 
-    def get_values_of_data(self, ids, fields, model):
-        queryset = model.objects.filter(pk_cattle__in=ids).values_list(*fields)
+    class Meta:
+        model = PK
+        fields = [
+            'id', 'datarojd', 'uniq_key', 'consolidation',
+            'rm', 'rbvt', 'rbvf', 'rbvu', 'rf', 'kompleks', 'pi', 'rc'
+        ]
 
-        aggregation_params = {}
-        for field in fields:
-            aggregation_params[f'avg_{field}'] = Avg(field, filter=Q(**{f"{field}__isnull": False}))
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        average_values = queryset.aggregate(**aggregation_params)
+        # Предзагрузка данных о родителях и быках
+        cow_ids = [obj.uniq_key for obj in self.instance]
+        parent_keys = Parentage.objects.filter(uniq_key__in=cow_ids).values_list('uniq_key', 'ukeyo')
+        parent_dict = {uniq_key: ukeyo for uniq_key, ukeyo in parent_keys}
 
-        return average_values
+        bull_keys = PKBull.objects.filter(uniq_key__in=[ukeyo for uniq_key, ukeyo in parent_keys])
+        bull_dict = {bull.uniq_key: bull for bull in bull_keys}
 
-    def to_representation(self, validated_data):
-        cow_ids = validated_data.get('cow_ids')
+        self.parent_dict = parent_dict
+        self.bull_dict = bull_dict
 
-        milk = self.get_values_of_data(
-            cow_ids,
-            ['rm'],
-            MilkProductionIndex
-        )
-        conf = self.get_values_of_data(
-            cow_ids,
-            ['rbvt', 'rbvf', 'rbvu', 'rc'],
-            ConformationIndex
-        )
-        reprod = self.get_values_of_data(
-            cow_ids,
-            ['rf'],
-            ReproductionIndex
-        )
-        com = self.get_values_of_data(
-            cow_ids,
-            ['pi'],
-            ComplexIndex
-        )
+    def get_rm(self, obj):
+        return getattr(obj.milkproductionindex, 'rm', '') if hasattr(obj, 'milkproductionindex') else ''
 
-        return {
-            'milk': milk,
-            'conf': conf,
-            'reprod': reprod,
-            'com': com,
-        }
+    def get_rbvt(self, obj):
+        return getattr(obj.conformationindex, 'rbvt', '') if hasattr(obj, 'conformationindex') else ''
+
+    def get_rbvf(self, obj):
+        return getattr(obj.conformationindex, 'rbvf', '') if hasattr(obj, 'conformationindex') else ''
+
+    def get_rbvu(self, obj):
+        return getattr(obj.conformationindex, 'rbvu', '') if hasattr(obj, 'conformationindex') else ''
+
+    def get_rf(self, obj):
+        return getattr(obj.reproductionindex, 'rf', '') if hasattr(obj, 'reproductionindex') else ''
+
+    def get_pi(self, obj):
+        return getattr(obj.complexindex, 'pi', '') if hasattr(obj, 'complexindex') else ''
+
+    def get_rc(self, obj):
+        return getattr(obj.conformationindex, 'rc', '') if hasattr(obj, 'conformationindex') else ''
+
+    def get_kompleks(self, obj):
+        parent_key = self.parent_dict.get(obj.uniq_key)
+        bull_info = self.bull_dict.get(parent_key)
+        return bull_info.kompleks if bull_info else None
 
 
 class ReportSerializer(serializers.ModelSerializer):

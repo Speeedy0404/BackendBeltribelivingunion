@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 from .models import *
 from django.conf import settings
@@ -8,11 +9,22 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from .serializers import GetCowParamsSerializer
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from fields import MAPPING
+
 
 class CustomPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = 'page_size'
     max_page_size = 3000
+
+
+def mapping_label(group_list):
+    for item in group_list:
+        param_name = item['param']
+        item['param'] = MAPPING[param_name]
+    return group_list
 
 
 class StatisticsListView(APIView):
@@ -22,7 +34,23 @@ class StatisticsListView(APIView):
         try:
             with open(file_path, 'r', encoding='utf-8') as file:
                 result_data = json.load(file)
-            return Response(result_data, status=status.HTTP_200_OK)
+                take_value = result_data['aggregated_data']
+                lactation_data = [
+                    take_value["lak_one"],
+                    take_value["lak_two"],
+                    take_value["lak_three"]
+                ]
+                table_one = mapping_label(take_value["breeding_value_of_milk_productivity"])
+                table_two = mapping_label(take_value["relative_breeding_value_of_milk_productivity"])
+
+                result = {
+                    'lactation_data': lactation_data,
+                    'breeding_value_of_milk_productivity': table_one,
+                    'relative_breeding_value_of_milk_productivity': table_two,
+                    'info': result_data['info']
+                }
+
+            return Response(result, status=status.HTTP_200_OK)
 
         except FileNotFoundError:
             return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)
