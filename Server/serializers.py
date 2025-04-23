@@ -305,7 +305,8 @@ class GetAnimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = PKBull
         fields = ['id', 'nomer', 'datarojd', 'kodmestrojd', 'datavybr', 'klichka', 'uniq_key', 'vet', 'ovner',
-                  'kompleks', 'sperma', 'milkproductionindexbull', 'conformationindexbull', 'reproductionindexbull',
+                  'kompleks', 'sperma', 'photo', 'milkproductionindexbull', 'conformationindexbull',
+                  'reproductionindexbull',
                   'somaticcellindexbull', 'lin_name', 'conformationindexdiagrambull', 'complexindexbull']
 
 
@@ -681,6 +682,134 @@ class BullIndividualFlatSerializer(serializers.ModelSerializer):
 
     def get_pi(self, obj):
         return getattr(obj.complexindexbull, 'pi', '') if hasattr(obj, 'complexindexbull') else ''
+
+
+class GetBullRatingDataFlat(serializers.ModelSerializer):
+    rm = serializers.SerializerMethodField()
+    rbvt = serializers.SerializerMethodField()
+    rbvf = serializers.SerializerMethodField()
+    rbvu = serializers.SerializerMethodField()
+    rc = serializers.SerializerMethodField()
+    rf = serializers.SerializerMethodField()
+    pi = serializers.SerializerMethodField()
+
+    ebv_milk = serializers.SerializerMethodField()
+    ebv_fkg = serializers.SerializerMethodField()
+    ebv_fprc = serializers.SerializerMethodField()
+    ebv_pkg = serializers.SerializerMethodField()
+    ebv_pprc = serializers.SerializerMethodField()
+    rbv_milk = serializers.SerializerMethodField()
+    rbv_fkg = serializers.SerializerMethodField()
+    rbv_pkg = serializers.SerializerMethodField()
+    rbv_crh = serializers.SerializerMethodField()
+    rbv_ctfi = serializers.SerializerMethodField()
+    rbv_do = serializers.SerializerMethodField()
+    rscs = serializers.SerializerMethodField()
+
+    farm = serializers.SerializerMethodField()
+
+    mother = serializers.SerializerMethodField()
+    father = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PKBull
+        fields = [
+            'id', 'datarojd', 'klichka', 'uniq_key', 'nomer', 'kompleks',
+            'ebv_milk', 'ebv_fkg', 'ebv_fprc', 'ebv_pkg', 'ebv_pprc', 'rbv_milk', 'rbv_fkg', 'rbv_pkg',
+            'rbv_crh', 'rbv_ctfi', 'rbv_do',
+            'rscs',
+
+            'rm',
+            'rbvt', 'rbvf', 'rbvu', 'rc',
+            'rf',
+            'pi',
+
+            'farm',
+            'mother',
+            'father',
+        ]
+
+    def get_rm(self, obj):
+        return getattr(obj.milkproductionindexbull, 'rm', '') if hasattr(obj, 'milkproductionindexbull') else ''
+
+    def get_rbvt(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvt', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rbvf(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvf', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rbvu(self, obj):
+        return getattr(obj.conformationindexbull, 'rbvu', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rc(self, obj):
+        return getattr(obj.conformationindexbull, 'rc', '') if hasattr(obj, 'conformationindexbull') else ''
+
+    def get_rf(self, obj):
+        return getattr(obj.reproductionindexbull, 'rf', '') if hasattr(obj, 'reproductionindexbull') else ''
+
+    def get_pi(self, obj):
+        return getattr(obj.complexindexbull, 'pi', '') if hasattr(obj, 'complexindexbull') else ''
+
+    def get_ebv_milk(self, obj):
+        return round(getattr(obj.milkproductionindexbull, 'ebv_milk', '')) if hasattr(obj,
+                                                                                      'milkproductionindexbull') and isinstance(
+            getattr(obj.milkproductionindexbull, 'ebv_milk', ''), (int, float)) else ''
+
+    def get_ebv_pkg(self, obj):
+        return round(getattr(obj.milkproductionindexbull, 'ebv_pkg', ''), 1) if hasattr(obj,
+                                                                                        'milkproductionindexbull') and isinstance(
+            getattr(obj.milkproductionindexbull, 'ebv_pkg', ''), (int, float)) else ''
+
+    def get_ebv_fprc(self, obj):
+        return round(getattr(obj.milkproductionindexbull, 'ebv_fprc', ''), 3) if hasattr(obj,
+                                                                                         'milkproductionindexbull') and isinstance(
+            getattr(obj.milkproductionindexbull, 'ebv_fprc', ''), (int, float)) else ''
+
+    def get_ebv_fkg(self, obj):
+        return round(getattr(obj.milkproductionindexbull, 'ebv_fkg', ''), 1) if hasattr(obj,
+                                                                                        'milkproductionindexbull') and isinstance(
+            getattr(obj.milkproductionindexbull, 'ebv_fkg', ''), (int, float)) else ''
+
+    def get_ebv_pprc(self, obj):
+        return round(getattr(obj.milkproductionindexbull, 'ebv_pprc', ''), 3) if hasattr(obj,
+                                                                                         'milkproductionindexbull') and isinstance(
+            getattr(obj.milkproductionindexbull, 'ebv_pprc', ''), (int, float)) else ''
+
+    def get_rbv_milk(self, obj):
+        return getattr(obj.milkproductionindexbull, 'rbv_milk', '') if hasattr(obj, 'milkproductionindexbull') else ''
+
+    def get_rbv_fkg(self, obj):
+        return getattr(obj.milkproductionindexbull, 'rbv_fkg', '') if hasattr(obj, 'milkproductionindexbull') else ''
+
+    def get_rbv_pkg(self, obj):
+        return getattr(obj.milkproductionindexbull, 'rbv_pkg', '') if hasattr(obj, 'milkproductionindexbull') else ''
+
+    def get_rbv_crh(self, obj):
+        return getattr(obj.reproductionindexbull, 'rbv_crh', '') if hasattr(obj, 'reproductionindexbull') else ''
+
+    def get_rbv_ctfi(self, obj):
+        return getattr(obj.reproductionindexbull, 'rbv_ctfi', '') if hasattr(obj, 'reproductionindexbull') else ''
+
+    def get_rbv_do(self, obj):
+        return getattr(obj.reproductionindexbull, 'rbv_do', '') if hasattr(obj, 'reproductionindexbull') else ''
+
+    def get_rscs(self, obj):
+        return getattr(obj.somaticcellindexbull, 'rscs', '') if hasattr(obj, 'somaticcellindexbull') else ''
+
+    def get_farm(self, obj):
+        farms = self.context.get('farms', {})
+        farm = farms.get(obj.ovner)
+        return farm.norg if farm else ''
+
+    def get_mother(self, obj):
+        parentages = self.context.get('parentages', {})
+        parent = parentages.get(obj.uniq_key)
+        return parent.ukeym if parent else ''
+
+    def get_father(self, obj):
+        parentages = self.context.get('parentages', {})
+        parent = parentages.get(obj.uniq_key)
+        return parent.ukeyo if parent else ''
 
 
 class BullIndividualAvgSerializer(serializers.Serializer):

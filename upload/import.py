@@ -5,11 +5,12 @@ import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'BackendBeltribelivingunion.settings')
 django.setup()
-from Server.serializers import AggregatedDataSerializer
+from Server.serializers import AggregatedDataSerializer, GetBullRatingDataFlat, GetAnimalSerializer
 from сonfiguration import *
 from datetime import datetime
 from django.db import transaction
 from django.db.models import Count
+from django.contrib.auth.models import User
 from multiprocessing import Process
 from collections import defaultdict
 from django.db.models import Subquery
@@ -18,6 +19,8 @@ from scipy.stats import gaussian_kde
 from collections import Counter
 import json
 import logging
+from PIL import Image
+import os
 import re
 from Prepare.ExcelProcessor import ExcelProcessor
 
@@ -243,19 +246,23 @@ def json_data_for_farms(batch):
             'aggregated_data': aggregated_data,
         }
 
-        field_values['pk_farm'] = farm
-        field_values['aggregated_data'] = result_data
-        data_batch.append(JsonFarmsData(**field_values))
+        # field_values['pk_farm'] = farm
+        # field_values['aggregated_data'] = result_data
+        # data_batch.append(JsonFarmsData(**field_values))
+
+        json_data = JsonFarmsData.objects.get(pk_farm=farm)
+        json_data.aggregated_data = result_data
+        data_batch.append(json_data)
 
         if len(data_batch) > 10:
             if data_batch:
                 with transaction.atomic():
-                    JsonFarmsData.objects.bulk_create(data_batch)
+                    JsonFarmsData.objects.bulk_update(data_batch, ['aggregated_data', ])
             data_batch = []
 
     if data_batch:
         with transaction.atomic():
-            JsonFarmsData.objects.bulk_create(data_batch)
+            JsonFarmsData.objects.bulk_update(data_batch, ['aggregated_data', ])
 
 
 def process_chunk_json_aggregated_data(farm_batch):
@@ -266,7 +273,7 @@ def process_chunk_json_aggregated_data(farm_batch):
 
 
 def add_json_aggregated_data_for_farms():
-    batch_size = 450
+    batch_size = 350
     processes = []
     farms = Farms.objects.all()
     farms_batches = [farms[i:i + batch_size] for i in range(0, len(farms), batch_size)]
@@ -439,6 +446,7 @@ def add_rating_for_farms():
 if __name__ == '__main__':
     pass
 
+
     # start_time = time.time()
     #
     # for component in import_list:
@@ -460,16 +468,17 @@ if __name__ == '__main__':
     # end_time = time.time()
     # print(f"Добавление необходимых данных коровам  за {end_time - start_time:.2f} секунд.")
     #
+
     # start_time = time.time()
     # add_json_aggregated_data_for_farms()
     # end_time = time.time()
     # print(f"Добавление агрегированых данных для хозяйств {end_time - start_time:.2f} секунд.")
-    #
+
     # start_time = time.time()
     # add_json_char_data_for_farms()
     # end_time = time.time()
     # print(f"Добавление графических данных для хозяйств {end_time - start_time:.2f} секунд.")
-
+    #
     # start_time = time.time()
     # add_rating_for_farms()
     # end_time = time.time()
@@ -481,6 +490,10 @@ if __name__ == '__main__':
     # for c in cow:
     #     c.consolidation = False
     #     c.save()
+
+    # farm = Farms.objects.get(korg=39224)
+    # farm.jsonfarmsdata.parameter_forecasting=None
+    # farm.jsonfarmsdata.save()
 
     # cow = PKYoungAnimals.objects.filter(kodxoz=381878, uniq_key= 'BY000125655411', consolidation=True)
     # for c in cow:
@@ -694,6 +707,422 @@ if __name__ == '__main__':
     #         else:
     #             create_xlsx_report(cow_numbers, bull_number, new_path_p, 'young', new_path[count][1],
     #                                new_path[count][2])
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
+    # сохранения фото быков ну да
+    # from django.core.files import File
+    #
+    #
+    # # Путь к директории с изображениями
+    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\bull_image'
+    #
+    # # Получаем список всех файлов в директории
+    # files = os.listdir(file_directory)
+    #
+    # # Фильтруем только изображения (например, .jpg и .jpeg)
+    # image_files = [f for f in files if f.lower().endswith(('.jpg', '.jpeg'))]
+    #
+    # # Проходим по каждому файлу
+    # for image_file in image_files:
+    #     animal_number = os.path.splitext(image_file)[0]
+    #
+    #     try:
+    #         # Находим быка по номеру
+    #         bull = PKBull.objects.get(nomer=animal_number)
+    #
+    #         # Полный путь к изображению
+    #         image_path = os.path.join(file_directory, image_file)
+    #
+    #         # Открываем файл и сохраняем в поле photo
+    #         with open(image_path, 'rb') as f:
+    #             bull.photo.save(f'bull_{animal_number}.jpg', File(f), save=True)
+    #             print(f'Фото для быка {animal_number} успешно сохранено.')
+    #
+    #     except PKBull.DoesNotExist:
+    #         print(f'Бык с номером {animal_number} не найден в базе данных.')
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
+    # сжатие фото
+
+    # def compress_image(input_path, output_path, max_size_kb=2000, quality=85):
+    #     # Открываем изображение
+    #     img = Image.open(input_path)
+    #
+    #     # Получаем текущие размеры изображения
+    #     width, height = img.size
+    #
+    #     # Уменьшаем размер изображения, если оно слишком большое
+    #     max_width = 1920  # Максимальная ширина изображения
+    #     max_height = 1080  # Максимальная высота изображения
+    #
+    #     if width > max_width or height > max_height:
+    #         img.thumbnail((max_width, max_height))
+    #
+    #     # Сжимаем изображение в формат JPEG с нужным качеством
+    #     img.save(output_path, 'JPEG', quality=quality)
+    #
+    #     # Проверяем размер файла и повторяем процесс с меньшим качеством, если нужно
+    #     file_size = os.path.getsize(output_path) / 1024  # в KB
+    #     while file_size > max_size_kb:
+    #         quality -= 5  # Уменьшаем качество на 5
+    #         img.save(output_path, 'JPEG', quality=quality)
+    #         file_size = os.path.getsize(output_path) / 1024  # обновляем размер файла
+    #
+    #     print(f"Изображение сохранено с размером {file_size} KB на пути: {output_path}")
+
+    # # Путь к исходной директории с изображениями
+    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\main'
+    #
+    # # Путь к директории, в которую будем сохранять уменьшенные изображения
+    # output_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\main_k'
+    #
+    # # Проверяем, существует ли директория для сохранения
+    # if not os.path.exists(output_directory):
+    #     os.makedirs(output_directory)
+    #
+    # # Получаем список всех файлов в директории
+    # files = os.listdir(file_directory)
+    #
+    # # Проходим по каждому файлу в директории
+    # for file in files:
+    #     # Проверяем, что это изображение (например, .jpg или .jpeg)
+    #     if file.lower().endswith(('.jpg', '.jpeg', '.png')):
+    #         # Путь к исходному файлу
+    #         input_path = os.path.join(file_directory, file)
+    #
+    #         # Путь для сохранения уменьшенного изображения в новой директории
+    #         output_path = os.path.join(output_directory, file)
+    #
+    #         # Вызываем функцию для сжатия изображения
+    #         compress_image(input_path, output_path)
+
+    # ----------------------------------------------------------------------------------------------------------------------
+    # ----------------------------------------------------------------------------------------------------------------------
+
+    # импорт полной инфы быка
+
+    # def safe_get(data, key, default=0):
+    #     value = data.get(key)
+    #     if value is None:
+    #         return default
+    #     return value
+    #
+    #
+    # def build_tree_info(uniq_key, level=2):
+    #     """Функция строит дерево предков до заданного уровня и возвращает данные в виде словаря"""
+    #     tree = {}
+    #
+    #     def recurse(key, current_level, relation=""):
+    #         if current_level > level:
+    #             return
+    #
+    #         try:
+    #             animal = Parentage.objects.get(uniq_key=key)
+    #         except Parentage.DoesNotExist:
+    #             return
+    #
+    #         # Добавляем отца и мать в дерево с учетом уровня и отношения
+    #         if animal.ukeyo:
+    #             bull_name = PKBull.objects.filter(uniq_key=animal.ukeyo).values_list('klichka', flat=True).first()
+    #             tree[f'{relation}O'] = f"{animal.ukeyo} ({bull_name})" if bull_name else animal.ukeyo
+    #             recurse(animal.ukeyo, current_level + 1, relation=f'{relation}O ')
+    #         if animal.ukeym:
+    #             tree[f'{relation}M'] = animal.ukeym
+    #             recurse(animal.ukeym, current_level + 1, relation=f'{relation}M ')
+    #
+    #     recurse(uniq_key, 1)
+    #
+    #     return tree
+    #
+    #
+    # import pandas as pd
+    #
+    #
+    # all_bulls_data = []
+    # for search in ['DE0361239926', 'NL648440402', 'NL718141776', 'BY000017585156', 'BY000084039686',
+    #                'DE0360385748', 'BY000039274924', 'BY000081581984']:
+    #     queryset = PKBull.objects.filter(
+    #         uniq_key=search
+    #     ).select_related(
+    #         'milkproductionindexbull', 'conformationindexbull', 'reproductionindexbull',
+    #         'somaticcellindexbull', 'complexindexbull', 'conformationindexdiagrambull'
+    #     ).order_by('id')
+    #
+    #     if not queryset.exists():
+    #         print(f"Нет данных по быку с ключом {search}")
+    #         continue
+    #
+    #     serializer = GetAnimalSerializer(queryset, many=True)
+    #     bull_data = serializer.data
+    #     tree = build_tree_info(search)
+    #
+    #     por = BookBreeds.objects.filter(
+    #         breed_code=Subquery(
+    #             PKBull.objects.filter(uniq_key=search).values('por')
+    #         )
+    #     ).values_list('breed_name', flat=True)
+    #
+    #     rojd = Farms.objects.filter(
+    #         korg=Subquery(
+    #             PKBull.objects.filter(uniq_key=search).values('kodmestrojd')
+    #         )
+    #     ).values_list('norg', flat=True)
+    #
+    #     ovner = Farms.objects.filter(
+    #         korg=Subquery(
+    #             PKBull.objects.filter(uniq_key=search).values('ovner')
+    #         )
+    #     ).values_list('norg', flat=True)
+    #
+    #     branch = BookBranches.objects.filter(
+    #         branch_code=Subquery(
+    #             PKBull.objects.filter(uniq_key=search).values('vet')
+    #         )
+    #     ).values_list('branch_name', flat=True)
+    #
+    #     info = {
+    #         'uniq_key': bull_data[0].get('uniq_key', ''),
+    #         'nomer': bull_data[0].get('nomer', ''),
+    #         'klichka': bull_data[0].get('klichka', ''),
+    #         'datarojd': bull_data[0].get('datarojd', ''),
+    #         'mestorojd': rojd.first() if hasattr(rojd, 'first') else '',
+    #         'ovner': ovner.first() if hasattr(ovner, 'first') else '',
+    #         'kompleks': bull_data[0].get('kompleks', ''),
+    #         'sperma': bull_data[0].get('sperma', ''),
+    #         'branch': branch.first() if hasattr(branch, 'first') else '',
+    #         'lin': bull_data[0].get('lin_name', ''),
+    #         'por': por.first() if hasattr(por, 'first') else ''
+    #     }
+    #     parent = [
+    #         {
+    #             'ped': 'father',
+    #             'klichka': tree.get('O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O',
+    #                                                                                           '') else 'Нет данных',
+    #             'uniq_key': tree.get('O', 'Нет данных').split('(')[0] if '(' in tree.get('O', '') else tree.get('O',
+    #                                                                                                             'Нет данных')
+    #         },
+    #         {
+    #             'ped': 'mother',
+    #             'klichka': 'Нет клички',
+    #             'uniq_key': tree.get('M', 'Нет данных')
+    #         },
+    #         {
+    #             'ped': 'father of father',
+    #             'klichka': tree.get('O O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O O',
+    #                                                                                             '') else 'Нет данных',
+    #             'uniq_key': tree.get('O O', 'Нет данных').split('(')[0] if '(' in tree.get('O O', '') else tree.get(
+    #                 'O O', 'Нет данных')
+    #         },
+    #         {
+    #             'ped': 'mother of mother',
+    #             'klichka': 'Нет клички',
+    #             'uniq_key': tree.get('M M', 'Нет данных')
+    #         },
+    #         {
+    #             'ped': 'mother of father',
+    #             'klichka': 'Нет клички',
+    #             'uniq_key': tree.get('O M', 'Нет данных')
+    #         },
+    #         {
+    #             'ped': 'father of mother',
+    #             'klichka': tree.get('M O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('M O',
+    #                                                                                             '') else 'Нет данных',
+    #             'uniq_key': tree.get('M O', 'Нет данных').split('(')[0] if '(' in tree.get('M O', '') else tree.get(
+    #                 'M O', 'Нет данных')
+    #         }
+    #     ]
+    #     livestock = {
+    #         1: 0 if bull_data[0].get('milkproductionindexbull') is None else bull_data[0].get(
+    #             'milkproductionindexbull', {}).get('num_daug_est', 0),
+    #         4: 0 if bull_data[0].get('reproductionindexbull') is None else bull_data[0].get('reproductionindexbull',
+    #                                                                                         {}).get('num_daug_est',
+    #                                                                                                 0),
+    #         7: 0 if bull_data[0].get('somaticcellindexbull') is None else bull_data[0].get('somaticcellindexbull',
+    #                                                                                        {}).get('num_daug_est',
+    #                                                                                                0),
+    #         0: 0 if bull_data[0].get('conformationindexbull') is None else bull_data[0].get('conformationindexbull',
+    #                                                                                         {}).get('num_daug_est',
+    #                                                                                                 0)
+    #     }
+    #     herd = {
+    #         1: 0 if bull_data[0].get('milkproductionindexbull') is None else bull_data[0].get(
+    #             'milkproductionindexbull', {}).get('num_herd_est', 0),
+    #         4: 0 if bull_data[0].get('reproductionindexbull') is None else bull_data[0].get('reproductionindexbull',
+    #                                                                                         {}).get('num_herd_est',
+    #                                                                                                 0),
+    #         7: 0 if bull_data[0].get('somaticcellindexbull') is None else bull_data[0].get('somaticcellindexbull',
+    #                                                                                        {}).get('num_herd_est',
+    #                                                                                                0),
+    #         0: 0 if bull_data[0].get('conformationindexbull') is None else bull_data[0].get('conformationindexbull',
+    #                                                                                         {}).get('num_herd_est',
+    #                                                                                                 0)
+    #     }
+    #     indices_bull = [
+    #         {
+    #             'name': 'M kg',
+    #             'evb': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('ebv_milk', 0), 2),
+    #             'rel': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rel_milk', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rbv_milk', 0), 2)
+    #         },
+    #         {
+    #             'name': 'F kg',
+    #             'evb': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('ebv_fkg', 0), 2),
+    #             'rel': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rel_fkg', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rbv_fkg', 0), 2)
+    #         },
+    #         {
+    #             'name': 'F %',
+    #             'evb': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('ebv_fprc', 0), 2),
+    #             'rel': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rel_fprc', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rbv_fprc', 0), 2)
+    #         },
+    #         {
+    #             'name': 'P kg',
+    #             'evb': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('ebv_pkg', 0), 2),
+    #             'rel': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rel_pkg', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rbv_pkg', 0), 2)
+    #         },
+    #         {
+    #             'name': 'P %',
+    #             'evb': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('ebv_pprc', 0), 2),
+    #             'rel': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rel_pprc', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('milkproductionindexbull', {}).get('rbv_pprc', 0), 2)
+    #         },
+    #         {
+    #             'name': 'CRH',
+    #             'evb': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('ebv_crh', 0), 2),
+    #             'rel': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rel_crh', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rbv_crh', 0), 2)
+    #         },
+    #         {
+    #             'name': 'CTF',
+    #             'evb': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('ebv_ctfi', 0), 2),
+    #             'rel': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rel_ctfi', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rbv_ctfi', 0), 2)
+    #         },
+    #         {
+    #             'name': 'DO',
+    #             'evb': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('ebv_do', 0), 2),
+    #             'rel': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rel_do', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 bull_data[0].get('reproductionindexbull', {}).get('rbv_do', 0), 2)
+    #         },
+    #         {
+    #             'name': 'SCS',
+    #             'evb': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(
+    #                 bull_data[0].get('somaticcellindexbull', {}).get('ebv_scs', 0), 2),
+    #             'rel': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(
+    #                 bull_data[0].get('somaticcellindexbull', {}).get('rel_scs', 0), 2),
+    #             'rbv': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(
+    #                 bull_data[0].get('somaticcellindexbull', {}).get('rscs', 0), 2)
+    #         }
+    #     ]
+    #     additional_info = [
+    #         {
+    #             'name': 'RBVT',
+    #             'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvt')),
+    #         },
+    #         {
+    #             'name': 'RBVF',
+    #             'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvf')),
+    #         },
+    #         {
+    #             'name': 'RBVU',
+    #             'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvu')),
+    #         },
+    #         {
+    #             'name': 'RC',
+    #             'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('conformationindexbull', {}), 'rc')),
+    #         },
+    #         {
+    #             'name': 'RM',
+    #             'value': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('milkproductionindexbull', {}), 'rm')),
+    #         },
+    #         {
+    #             'name': 'RF',
+    #             'value': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('reproductionindexbull', {}), 'rf')),
+    #         },
+    #         {
+    #             'name': 'RSCS',
+    #             'value': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('somaticcellindexbull', {}), 'rscs')),
+    #         },
+    #         {
+    #             'name': 'PI',
+    #             'value': 0 if bull_data[0].get('complexindexbull', {}) is None else round(
+    #                 safe_get(bull_data[0].get('complexindexbull', {}), 'pi')),
+    #         },
+    #     ]
+    #
+    #     result_data = {
+    #         'info': info,
+    #         'parent': parent,
+    #         'livestock': livestock,
+    #         'herd': herd,
+    #         'indices': indices_bull,
+    #         'additional_info': additional_info,
+    #         'linear_profile': bull_data[0].get('conformationindexdiagrambull', {}),
+    #     }
+    #
+    #     print(result_data)
+    #
+    #     # Распаковываем данные в плоский словарь
+    #     flat_data = result_data['info'].copy()
+    #
+    #     # Родители
+    #     for p in result_data['parent']:
+    #         flat_data[f"{p['ped']} кличка"] = p['klichka']
+    #         flat_data[f"{p['ped']} uniq_key"] = p['uniq_key']
+    #
+    #     # Индексы
+    #     for idx in result_data['indices']:
+    #         flat_data[f"{idx['name']} EVB"] = idx['evb']
+    #         flat_data[f"{idx['name']} REL"] = idx['rel']
+    #         flat_data[f"{idx['name']} RBV"] = idx['rbv']
+    #
+    #     # Доп. инфо
+    #     for add in result_data['additional_info']:
+    #         flat_data[add['name']] = add['value']
+    #
+    #     # Линейный профиль
+    #     for k, v in result_data['linear_profile'].items():
+    #         flat_data[k] = v
+    #
+    #     # Сохраняем в Excel
+    #     all_bulls_data.append(flat_data)
+    #
+    # df = pd.DataFrame(all_bulls_data)
+    # df.to_excel("bull_data.xlsx", index=False)
 
     # ----------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------

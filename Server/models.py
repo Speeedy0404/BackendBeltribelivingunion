@@ -46,6 +46,7 @@ class PKBull(models.Model):
     datavybr = models.DateField(null=True, blank=True)
     sperma = models.IntegerField(verbose_name='sperma', null=True, blank=True)
     dliaispolzovaniiavsegodoz = models.IntegerField(verbose_name='dliaispolzovaniiavsegodoz', null=True, blank=True)
+    photo = models.ImageField(upload_to='bull_photos/', null=True, blank=True, verbose_name='Фотография')
 
     def __str__(self):
         return f'{self.nomer} - {self.uniq_key}'

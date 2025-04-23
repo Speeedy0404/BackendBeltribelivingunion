@@ -33,6 +33,13 @@ def build_tree_info(uniq_key, level=2):
     return tree
 
 
+def safe_get(data, key, default=0):
+    value = data.get(key)
+    if value is None:
+        return default
+    return value
+
+
 class GetInfoCowView(APIView):
     def post(self, request):
         search = request.query_params.get('uniq_key', None)
@@ -133,132 +140,132 @@ class GetInfoCowView(APIView):
                 {
                     'name': 'M kg',
                     'evb': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('ebv_milk', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'ebv_milk'), 2),
                     'rel': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rel_milk', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rel_milk'), 2),
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rbv_milk', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rbv_milk'), 2)
                 },
                 {
                     'name': 'F kg',
                     'evb': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('ebv_fkg', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'ebv_fkg'), 2),
                     'rel': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rel_fkg', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rel_fkg'), 2),
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rbv_fkg', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rbv_fkg'), 2)
                 },
                 {
                     'name': 'F %',
                     'evb': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('ebv_fprc', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'ebv_fprc'), 2),
                     'rel': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rel_fprc', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rel_fprc'), 2),
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rbv_fprc', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rbv_fprc'), 2)
                 },
                 {
                     'name': 'P kg',
                     'evb': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('ebv_pkg', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'ebv_pkg'), 2),
                     'rel': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rel_pkg', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rel_pkg'), 2),
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rbv_pkg', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rbv_pkg'), 2)
                 },
                 {
                     'name': 'P %',
                     'evb': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('ebv_pprc', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'ebv_pprc'), 2),
                     'rel': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rel_pprc', 0), 2),
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rel_pprc'), 2),
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rbv_pprc', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rbv_pprc'), 2)
                 },
                 {
                     'name': 'RM %',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('milkproductionindex', {}) is None else round(
-                        cow_data[0].get('milkproductionindex', {}).get('rm', 0), 2)
+                        safe_get(cow_data[0].get('milkproductionindex', {}), 'rm'), 2)
                 },
                 {
                     'name': 'CRH',
                     'evb': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('ebv_crh', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'ebv_crh'), 2),
                     'rel': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rel_crh', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rel_crh'), 2),
                     'rbv': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rbv_crh', 0), 2)
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rbv_crh'), 2)
                 },
                 {
                     'name': 'CTF',
                     'evb': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('ebv_ctfi', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'ebv_ctfi'), 2),
                     'rel': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rel_ctfi', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rel_ctfi'), 2),
                     'rbv': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rbv_ctfi', 0), 2)
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rbv_ctfi'), 2)
                 },
                 {
                     'name': 'DO',
                     'evb': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('ebv_do', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'ebv_do'), 2),
                     'rel': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rel_do', 0), 2),
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rel_do'), 2),
                     'rbv': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rbv_do', 0), 2)
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rbv_do'), 2)
                 },
                 {
                     'name': 'RF',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('reproductionindex', {}) is None else round(
-                        cow_data[0].get('reproductionindex', {}).get('rf', 0), 2)
+                        safe_get(cow_data[0].get('reproductionindex', {}), 'rf'), 2)
                 },
                 {
                     'name': 'RSCS',
                     'evb': 0 if cow_data[0].get('somaticcellindex', {}) is None else round(
-                        cow_data[0].get('somaticcellindex', {}).get('ebv_scs', 0), 2),
+                        safe_get(cow_data[0].get('somaticcellindex', {}), 'ebv_scs'), 2),
                     'rel': 0 if cow_data[0].get('somaticcellindex', {}) is None else round(
-                        cow_data[0].get('somaticcellindex', {}).get('rel_scs', 0), 2),
+                        safe_get(cow_data[0].get('somaticcellindex', {}), 'rel_scs'), 2),
                     'rbv': 0 if cow_data[0].get('somaticcellindex', {}) is None else round(
-                        cow_data[0].get('somaticcellindex', {}).get('rscs', 0), 2)
+                        safe_get(cow_data[0].get('somaticcellindex', {}), 'rscs'), 2)
                 },
                 {
                     'name': 'RBVT',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('conformationindex', {}) is None else round(
-                        cow_data[0].get('conformationindex', {}).get('rbvt', 0), 2)
+                        safe_get(cow_data[0].get('conformationindex', {}), 'rbvt'), 2)
                 },
                 {
                     'name': 'RBVF',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('conformationindex', {}) is None else round(
-                        cow_data[0].get('conformationindex', {}).get('rbvf', 0), 2)
+                        safe_get(cow_data[0].get('conformationindex', {}), 'rbvf'), 2)
                 },
                 {
                     'name': 'RBVU',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('conformationindex', {}) is None else round(
-                        cow_data[0].get('conformationindex', {}).get('rbvu', 0), 2)
+                        safe_get(cow_data[0].get('conformationindex', {}), 'rbvu'), 2)
                 },
                 {
                     'name': 'RC',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('conformationindex', {}) is None else round(
-                        cow_data[0].get('conformationindex', {}).get('rc', 0), 2)
+                        safe_get(cow_data[0].get('conformationindex', {}), 'rc'), 2)
                 },
                 {
                     'name': 'PI',
                     'evb': '',
                     'rel': '',
                     'rbv': 0 if cow_data[0].get('complexindex', {}) is None else round(
-                        cow_data[0].get('complexindex', {}).get('pi', 0), 2)
+                        safe_get(cow_data[0].get('complexindex', {}), 'pi'), 2)
                 },
             ]
 
@@ -272,5 +279,5 @@ class GetInfoCowView(APIView):
             return Response(result_data, status=status.HTTP_200_OK)
 
         except PKBull.DoesNotExist:
-           
+
             return Response({"Answer": "Данные отсутсвуют."}, status=status.HTTP_200_OK)

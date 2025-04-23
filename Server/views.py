@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from .serializers import GetCowParamsSerializer
+from .serializers import GetCowParamsSerializer, GetBullRatingDataFlat
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
@@ -135,6 +135,38 @@ class RatingOfFarms(APIView):
         try:
             data = JsonFarmsData.objects.all().values_list('rating_data', flat=True)
             return Response({'rating_data': data}, status=status.HTTP_200_OK)
+
+        except FileNotFoundError:
+            return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)
+        except json.JSONDecodeError:
+            return Response({"error": "Ошибка декодирования JSON."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class RatingOfBull(APIView):
+    """API для получения списка отчетов для конкретного хозяйства"""
+
+    def get(self, request):
+        try:
+
+            bulls = PKBull.objects.all().select_related(
+                'milkproductionindexbull', 'conformationindexbull', 'reproductionindexbull',
+                'somaticcellindexbull', 'complexindexbull').order_by('id')
+
+            uniq_keys = list(bulls.values_list('uniq_key', flat=True))
+            ovners = list(bulls.values_list('ovner', flat=True))
+
+            parentages = {
+                p.uniq_key: p for p in Parentage.objects.filter(uniq_key__in=uniq_keys)
+            }
+
+            farms = {
+                f.korg: f for f in Farms.objects.filter(korg__in=ovners)
+            }
+
+            serializer = GetBullRatingDataFlat(
+                bulls, many=True, context={'parentages': parentages, 'farms': farms}
+            )
+            return Response({"bull_data": serializer.data}, status=status.HTTP_200_OK)
 
         except FileNotFoundError:
             return Response({"error": "JSON файл не найден."}, status=status.HTTP_404_NOT_FOUND)

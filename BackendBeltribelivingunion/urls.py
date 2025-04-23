@@ -1,5 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
+from django.views.static import serve
+from django.conf.urls.static import static
 from rest_framework import routers
 
 from Server.views import *
@@ -57,6 +59,8 @@ urlpatterns = [
     # API для получения рейтинга хоз
     path('api/v1/rating-of-farms/', RatingOfFarms.as_view(), name='rating-of-farms'),
 
+    path('api/v1/rating-of-bull/', RatingOfBull.as_view(), name='rating-of-farms'),
+
     # API для поиска быка по кличке/номеру/раб. номеру
     path('api/v1/find-animal/', FindAnimalListView.as_view(), name='find-animal'),
 
@@ -87,7 +91,8 @@ urlpatterns = [
     # API для информации о породах
     path('api/v1/breeds-book/', BookBreedsListView.as_view(), name='breeds-list'),
 
-    path('api/v1/auth', include('djoser.urls')),
+    re_path(r'^auth/', include('djoser.urls')),
     re_path(r'^auth/', include('djoser.urls.authtoken')),
     path('admin/', admin.site.urls),
+    path('image/<path:path>/', serve, {'document_root': settings.MEDIA_ROOT}),
 ]

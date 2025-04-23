@@ -1,4 +1,3 @@
-from numpy.ma.core import indices
 from rest_framework import status
 from django.db.models import Subquery
 from rest_framework.views import APIView
@@ -34,6 +33,13 @@ def build_tree_info(uniq_key, level=2):
     return tree
 
 
+def safe_get(data, key, default=0):
+    value = data.get(key)
+    if value is None:
+        return default
+    return value
+
+
 class GetInfoView(APIView):
 
     def post(self, request):
@@ -54,7 +60,6 @@ class GetInfoView(APIView):
 
             serializer = GetAnimalSerializer(queryset, many=True)
             bull_data = serializer.data
-
             tree = build_tree_info(search)
 
             por = BookBreeds.objects.filter(
@@ -97,8 +102,10 @@ class GetInfoView(APIView):
             parent = [
                 {
                     'ped': 'father',
-                    'klichka': tree.get('O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O', '') else 'Нет данных',
-                    'uniq_key': tree.get('O', 'Нет данных').split('(')[0] if '(' in tree.get('O', '') else tree.get('O', 'Нет данных')
+                    'klichka': tree.get('O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O',
+                                                                                                  '') else 'Нет данных',
+                    'uniq_key': tree.get('O', 'Нет данных').split('(')[0] if '(' in tree.get('O', '') else tree.get('O',
+                                                                                                                    'Нет данных')
                 },
                 {
                     'ped': 'mother',
@@ -107,7 +114,8 @@ class GetInfoView(APIView):
                 },
                 {
                     'ped': 'father of father',
-                    'klichka': tree.get('O O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O O', '') else 'Нет данных',
+                    'klichka': tree.get('O O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('O O',
+                                                                                                    '') else 'Нет данных',
                     'uniq_key': tree.get('O O', 'Нет данных').split('(')[0] if '(' in tree.get('O O', '') else tree.get(
                         'O O', 'Нет данных')
                 },
@@ -123,7 +131,8 @@ class GetInfoView(APIView):
                 },
                 {
                     'ped': 'father of mother',
-                    'klichka': tree.get('M O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('M O', '') else 'Нет данных',
+                    'klichka': tree.get('M O', 'Нет данных').split('(')[1][0:-1] if '(' in tree.get('M O',
+                                                                                                    '') else 'Нет данных',
                     'uniq_key': tree.get('M O', 'Нет данных').split('(')[0] if '(' in tree.get('M O', '') else tree.get(
                         'M O', 'Нет данных')
                 }
@@ -240,49 +249,56 @@ class GetInfoView(APIView):
             additional_info = [
                 {
                     'name': 'RBVT',
-                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(bull_data[0].get('conformationindexbull', {}).get('rbvt', 0)),
+                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvt')),
                 },
                 {
                     'name': 'RBVF',
-                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(bull_data[0].get('conformationindexbull', {}).get('rbvf', 0)),
+                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvf')),
                 },
                 {
                     'name': 'RBVU',
-                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(bull_data[0].get('conformationindexbull', {}).get('rbvu', 0)),
+                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('conformationindexbull', {}), 'rbvu')),
                 },
                 {
                     'name': 'RC',
-                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(bull_data[0].get('conformationindexbull', {}).get('rc', 0)),
+                    'value': 0 if bull_data[0].get('conformationindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('conformationindexbull', {}), 'rc')),
                 },
                 {
                     'name': 'RM',
-                    'value': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(bull_data[0].get('milkproductionindexbull', {}).get('rm'), 0),
+                    'value': 0 if bull_data[0].get('milkproductionindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('milkproductionindexbull', {}), 'rm')),
                 },
                 {
                     'name': 'RF',
-                    'value':  0 if bull_data[0].get('reproductionindexbull', {}) is None else round(bull_data[0].get('reproductionindexbull', {}).get('rf', 0)),
+                    'value': 0 if bull_data[0].get('reproductionindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('reproductionindexbull', {}), 'rf')),
                 },
                 {
                     'name': 'RSCS',
-                    'value': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(bull_data[0].get('somaticcellindexbull', {}).get('rscs', 0)),
+                    'value': 0 if bull_data[0].get('somaticcellindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('somaticcellindexbull', {}), 'rscs')),
                 },
                 {
                     'name': 'PI',
-                    'value': 0 if bull_data[0].get('complexindexbull', {}) is None else round(bull_data[0].get('complexindexbull', {}).get('pi', 0)),
+                    'value': 0 if bull_data[0].get('complexindexbull', {}) is None else round(
+                        safe_get(bull_data[0].get('complexindexbull', {}), 'pi')),
                 },
             ]
 
             result_data = {
-                'image': None,
                 'info': info,
                 'parent': parent,
                 'livestock': livestock,
                 'herd': herd,
                 'indices': indices_bull,
                 'additional_info': additional_info,
-                'linear_profile': bull_data[0].get('conformationindexdiagrambull', {})
+                'linear_profile': bull_data[0].get('conformationindexdiagrambull', {}),
+                'photo': bull_data[0].get('photo', '')
             }
-
             return Response(result_data, status=status.HTTP_200_OK)
 
         except PKBull.DoesNotExist:
