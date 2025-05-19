@@ -176,7 +176,14 @@ class ParameterForecastingView(APIView):
                 return Response(result_data, status=status.HTTP_200_OK)
 
             new_paths = [path + ".xlsx" for path in paths]
-            directory_path = new_paths[0].split('__')[0][:-16]
+            filename = new_paths[0]
+
+            if '__' in filename:
+                directory_path = filename.split('__')[0]
+            else:
+                directory_path = filename.split('.')[0]
+
+            directory_path = directory_path[:-16]
 
             reports = []
             for new_path in new_paths:

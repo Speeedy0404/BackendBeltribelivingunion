@@ -8,6 +8,7 @@ from collections import defaultdict
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from ..models import Farms, PK, PKYoungAnimals, Parentage, PKBull, Report
+from ..serializers import CowParameterForecastingSerializer, BullParameterForecastingSerializer
 
 from reportlab.lib import colors
 from reportlab.lib.units import inch
@@ -19,6 +20,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, 
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, Border, Side, PatternFill
+from .ParameterForecastingView import set_predict, calculate_weighted_average, calculate_weighted_average_with_bulls, \
+    calculate_average, get_weighted_avg_bull, mapping_label
 
 REPORT_DIR = os.path.join(settings.BASE_DIR, 'reports')
 ICON_PATH = os.path.join(settings.BASE_DIR, 'image/dna.png')
@@ -322,7 +325,8 @@ def create_pdf_report(cows, bulls, name_pdf, user_name=None):
         raise
 
 
-def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=None):
+def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, forecasting_1, forecasting_2, forecasting_3,
+                       forecasting_4, user_name=None):
     try:
         if not os.path.exists(REPORT_DIR):
             os.makedirs(REPORT_DIR)
@@ -446,12 +450,170 @@ def create_xlsx_report(cows, bulls, name_xlsx, mode, current_time, user_name=Non
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
+        # --- Прогноз закрепления ---
+        forecast_headers = [
+            ("Показатель", "param"),
+            ("Средняя генетическая ценность коров", "avg"),
+            ("Среднее генетическое превосходство быков над коровами", "bull_superiority"),
+            ("Прогнозируемый эффект селекции потомства от скрещивания закрепленных коров и быков на поколение",
+             "predict")
+        ]
+
+        def write_forecast_block(ws, forecast_data, start_col_index, start_row, title):
+            from openpyxl.utils import get_column_letter
+
+            # Заголовок таблицы
+            end_col_index = start_col_index + len(forecast_headers) - 1
+            start_col_letter = get_column_letter(start_col_index)
+            end_col_letter = get_column_letter(end_col_index)
+
+            ws.merge_cells(f"{start_col_letter}{start_row}:{end_col_letter}{start_row}")
+            title_cell = ws[f"{start_col_letter}{start_row}"]
+            title_cell.value = title
+            title_cell.font = Font(bold=True, size=12)
+            title_cell.alignment = Alignment(horizontal="center", vertical="center")
+
+            # Проставляем границу для всех ячеек объединённого заголовка
+            for col in range(start_col_index, end_col_index + 1):
+                col_letter = get_column_letter(col)
+                cell = ws[f"{col_letter}{start_row}"]
+                cell.border = thick_border
+
+            # Заголовки
+            for col_index, (header_name, _) in enumerate(forecast_headers):
+                col_letter = get_column_letter(start_col_index + col_index)
+                cell = ws[f"{col_letter}{start_row + 1}"]
+                cell.value = header_name
+                cell.font = Font(bold=True)
+                cell.alignment = Alignment(wrap_text=True, horizontal="center", vertical="center")
+                cell.border = thick_border
+
+                # Настройка ширины
+                if col_index == 0:
+                    ws.column_dimensions[col_letter].width = 40  # Широкая колонка для "Показатель"
+                else:
+                    ws.column_dimensions[col_letter].width = 22
+
+            # Данные
+            for row_offset, item in enumerate(forecast_data, start=2):
+                for col_index, (_, key) in enumerate(forecast_headers):
+                    col_letter = get_column_letter(start_col_index + col_index)
+                    cell = ws[f"{col_letter}{start_row + row_offset}"]
+                    value = item.get(key)
+                    cell.value = round(value, 4) if isinstance(value, (int, float)) else value
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = thin_border
+
+        forecast_start_row = row_start
+        write_forecast_block(ws, forecasting_1 + forecasting_2, 12, forecast_start_row, "Прогноз продуктивности")
+
+        second_block_start_row = forecast_start_row + len(forecasting_1 + forecasting_2) + 5  # +5 для отступа
+        write_forecast_block(ws, forecasting_3 + forecasting_4, 12, second_block_start_row, "Прогноз воспроизводства")
+
         wb.save(xlsx_path)
 
         return xlsx_path
     except Exception as e:
         print(f"Ошибка при создании xlsx отчета: {e}")
         raise
+
+
+def forecasting_function(reports, aggregated_data):
+    cows_param = []
+    avg_values = []
+    count_cows = 0
+
+    for report in reports:
+        cows = PK.objects.filter(uniq_key__in=report[0]).values_list('uniq_key', flat=True)
+
+        if len(cows) == len(report[0]):
+            queryset = PK.objects.filter(
+                uniq_key__in=cows
+            ).select_related(
+                'milkproductionindex', 'conformationindex', 'reproductionindex',
+                'somaticcellindex',
+            ).order_by('id')
+
+            number = queryset.count()
+            count_cows += number
+            serializer = CowParameterForecastingSerializer(queryset, many=True)
+            cow_data = serializer.data
+
+            queryset = PKBull.objects.filter(
+                uniq_key__in=report[1]
+            ).select_related(
+                'milkproductionindexbull', 'conformationindexbull', 'reproductionindexbull',
+                'somaticcellindexbull',
+            ).order_by('id')
+
+            serializer = BullParameterForecastingSerializer(queryset, many=True)
+            bull_data = serializer.data
+
+            average_conformation, avg_conf = calculate_weighted_average(bull_data, 'conformationindexbull',
+                                                                        number)
+            average_milk, avg_milk = calculate_weighted_average(bull_data, 'milkproductionindexbull', number)
+            average_reproduction, avg_reprod = calculate_weighted_average(bull_data, 'reproductionindexbull',
+                                                                          number)
+            average_somaticcell, avg_somatic = calculate_weighted_average(bull_data, 'somaticcellindexbull',
+                                                                          number)
+
+            avg_values.append([avg_conf, avg_milk, avg_reprod, avg_somatic])
+            cows = calculate_weighted_average_with_bulls(cow_data,
+                                                         [average_conformation, average_milk,
+                                                          average_reproduction,
+                                                          average_somaticcell],
+                                                         ['conformationindex', 'milkproductionindex',
+                                                          'reproductionindex', 'somaticcellindex'])
+
+            cows_param.extend(cows)
+        else:
+            pass
+    avg_dict = get_weighted_avg_bull(avg_values, count_cows)
+
+    forecasting = {
+        'tip': calculate_average(cows_param, 'conformationindex', 'ebv_tip'),
+        'kt': calculate_average(cows_param, 'conformationindex', 'ebv_kt'),
+        'rost': calculate_average(cows_param, 'conformationindex', 'ebv_rost'),
+        'gt': calculate_average(cows_param, 'conformationindex', 'ebv_gt'),
+        'pz': calculate_average(cows_param, 'conformationindex', 'ebv_pz'),
+        'shz': calculate_average(cows_param, 'conformationindex', 'ebv_shz'),
+        'pzkb': calculate_average(cows_param, 'conformationindex', 'ebv_pzkb'),
+        'pzkz': calculate_average(cows_param, 'conformationindex', 'ebv_pzkz'),
+        'sust': calculate_average(cows_param, 'conformationindex', 'ebv_sust'),
+        'pzkop': calculate_average(cows_param, 'conformationindex', 'ebv_pzkop'),
+        'gv': calculate_average(cows_param, 'conformationindex', 'ebv_gv'),
+        'pdv': calculate_average(cows_param, 'conformationindex', 'ebv_pdv'),
+        'vzcv': calculate_average(cows_param, 'conformationindex', 'ebv_vzcv'),
+        'szcv': calculate_average(cows_param, 'conformationindex', 'ebv_szcv'),
+        'csv': calculate_average(cows_param, 'conformationindex', 'ebv_csv'),
+        'rps': calculate_average(cows_param, 'conformationindex', 'ebv_rps'),
+        'rzs': calculate_average(cows_param, 'conformationindex', 'ebv_rzs'),
+        'ds': calculate_average(cows_param, 'conformationindex', 'ebv_ds'),
+
+        'milk': calculate_average(cows_param, 'milkproductionindex', 'ebv_milk'),
+        'fkg': calculate_average(cows_param, 'milkproductionindex', 'ebv_fkg'),
+        'fprc': calculate_average(cows_param, 'milkproductionindex', 'ebv_fprc'),
+        'pkg': calculate_average(cows_param, 'milkproductionindex', 'ebv_pkg'),
+        'pprc': calculate_average(cows_param, 'milkproductionindex', 'ebv_pprc'),
+
+        'crh': calculate_average(cows_param, 'reproductionindex', 'ebv_crh'),
+        'ctfi': calculate_average(cows_param, 'reproductionindex', 'ebv_ctfi'),
+        'do': calculate_average(cows_param, 'reproductionindex', 'ebv_do'),
+
+        'scs': calculate_average(cows_param, 'somaticcellindex', 'ebv_scs'),
+    }
+
+    forecasting_1 = set_predict(aggregated_data['forecasting_section_one'], forecasting, avg_dict)
+    forecasting_2 = set_predict(aggregated_data['forecasting_section_two'], forecasting, avg_dict)
+    forecasting_3 = set_predict(aggregated_data['forecasting_section_three'], forecasting, avg_dict)
+    forecasting_4 = set_predict(aggregated_data['forecasting_section_four'], forecasting, avg_dict)
+
+    forecasting_1 = mapping_label(forecasting_1)
+    forecasting_2 = mapping_label(forecasting_2)
+    forecasting_3 = mapping_label(forecasting_3)
+    forecasting_4 = mapping_label(forecasting_4)
+
+    return forecasting_1, forecasting_2, forecasting_3, forecasting_4
 
 
 class ConsolidationView(APIView):
@@ -466,6 +628,8 @@ class ConsolidationView(APIView):
 
         try:
             name_pdf = Farms.objects.get(korg=self.request.headers.get('Kodrn')).norg
+            farm = Farms.objects.get(korg=self.request.headers.get('Kodrn'))
+            aggregated_data = farm.jsonfarmsdata.aggregated_data['aggregated_data']
             mod = self.request.headers.get('Mode')
         except Farms.DoesNotExist:
             return Response({"error": "Ферма не найдена."}, status=status.HTTP_404_NOT_FOUND)
@@ -492,7 +656,10 @@ class ConsolidationView(APIView):
                 perform_consolidation(cows, mode)
                 if user_name:
                     pdf_file_path, current_time = create_pdf_report(cows, bulls, name_pdf, user_name)
-                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time, user_name)
+                    forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function([[cows, bulls]],
+                                                                                                      aggregated_data)
+                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                       forecasting_3, forecasting_4, user_name)
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
                     Report.objects.create(
@@ -503,7 +670,10 @@ class ConsolidationView(APIView):
 
                 else:
                     pdf_file_path, current_time = create_pdf_report(cows, bulls, name_pdf)
-                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time)
+                    forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function([[cows, bulls]],
+                                                                                                      aggregated_data)
+                    create_xlsx_report(cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                       forecasting_3, forecasting_4)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -528,7 +698,10 @@ class ConsolidationView(APIView):
                 perform_consolidation(filtered_cows, mode)
                 if user_name:
                     pdf_file_path, current_time = create_pdf_report(filtered_cows, bulls, name_pdf, user_name)
-                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time, user_name)
+                    forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function([[cows, bulls]],
+                                                                                                      aggregated_data)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                       forecasting_3, forecasting_4, user_name)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -540,7 +713,10 @@ class ConsolidationView(APIView):
 
                 else:
                     pdf_file_path, current_time = create_pdf_report(filtered_cows, bulls, name_pdf)
-                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time)
+                    forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function([[cows, bulls]],
+                                                                                                      aggregated_data)
+                    create_xlsx_report(filtered_cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                       forecasting_3, forecasting_4)
 
                     path = pdf_file_path.replace('.pdf', '')
                     path = os.path.basename(path)
@@ -560,7 +736,10 @@ class ConsolidationView(APIView):
                     perform_consolidation(cows, mode)
                     if user_name:
                         pdf_file_path, current_time, = create_pdf_report(cows, bulls, name_pdf, user_name)
-                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time, user_name)
+                        forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function(
+                            [[cows, bulls]], aggregated_data)
+                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                           forecasting_3, forecasting_4, user_name)
                         path = pdf_file_path.replace('.pdf', '')
                         path = os.path.basename(path)
                         Report.objects.create(
@@ -571,7 +750,10 @@ class ConsolidationView(APIView):
 
                     else:
                         pdf_file_path, current_time, = create_pdf_report(cows, bulls, name_pdf)
-                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time)
+                        forecasting_1, forecasting_2, forecasting_3, forecasting_4 = forecasting_function(
+                            [[cows, bulls]], aggregated_data)
+                        create_xlsx_report(cows, bulls, name_pdf, mode, current_time, forecasting_1, forecasting_2,
+                                           forecasting_3, forecasting_4)
 
                         path = pdf_file_path.replace('.pdf', '')
                         path = os.path.basename(path)

@@ -446,7 +446,6 @@ def add_rating_for_farms():
 if __name__ == '__main__':
     pass
 
-
     # start_time = time.time()
     #
     # for component in import_list:
@@ -715,7 +714,7 @@ if __name__ == '__main__':
     #
     #
     # # Путь к директории с изображениями
-    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\bull_image'
+    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\bull_image_input'
     #
     # # Получаем список всех файлов в директории
     # files = os.listdir(file_directory)
@@ -770,12 +769,12 @@ if __name__ == '__main__':
     #         file_size = os.path.getsize(output_path) / 1024  # обновляем размер файла
     #
     #     print(f"Изображение сохранено с размером {file_size} KB на пути: {output_path}")
-
+    #
     # # Путь к исходной директории с изображениями
-    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\main'
+    # file_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\bull_image_input'
     #
     # # Путь к директории, в которую будем сохранять уменьшенные изображения
-    # output_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\main_k'
+    # output_directory = r'D:\Projects\WebApplication\BackendBeltribelivingunion\image\bull_image_compressed'
     #
     # # Проверяем, существует ли директория для сохранения
     # if not os.path.exists(output_directory):
@@ -1126,3 +1125,176 @@ if __name__ == '__main__':
 
     # ----------------------------------------------------------------------------------------------------------------------
     # ----------------------------------------------------------------------------------------------------------------------
+
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # Генетические тренды
+
+    # from django.db.models import Avg
+    #
+    # results = []
+    #
+    # for year in range(2009, 2023):
+    #     # Быки
+    #     querysetBull = PKBull.objects.filter(datarojd__year=year).select_related(
+    #         'milkproductionindexbull',
+    #         'reproductionindexbull',
+    #         'somaticcellindexbull',
+    #         'conformationindexbull'
+    #     )
+    #
+    #     bulls_rm_heads = querysetBull.filter(milkproductionindexbull__rm__isnull=False,
+    #                                          milkproductionindexbull__num_daug_est__gt=19).count()
+    #     bulls_rm = querysetBull.filter(milkproductionindexbull__rm__isnull=False,
+    #                                    milkproductionindexbull__num_daug_est__gt=19).aggregate(
+    #         avg_rm=Avg('milkproductionindexbull__rm')
+    #     )['avg_rm']
+    #
+    #     bulls_rc_heads = querysetBull.filter(conformationindexbull__rc__isnull=False,
+    #                                          conformationindexbull__num_daug_est__gt=19).count()
+    #     bulls_rc = querysetBull.filter(conformationindexbull__rc__isnull=False,
+    #                                    conformationindexbull__num_daug_est__gt=19).aggregate(
+    #         avg_rc=Avg('conformationindexbull__rc')
+    #     )['avg_rc']
+    #
+    #     bulls_rf_heads = querysetBull.filter(reproductionindexbull__rf__isnull=False,
+    #                                          reproductionindexbull__num_daug_est__gt=19).count()
+    #     bulls_rf = querysetBull.filter(reproductionindexbull__rf__isnull=False,
+    #                                    reproductionindexbull__num_daug_est__gt=19).aggregate(
+    #         avg_rf=Avg('reproductionindexbull__rf')
+    #     )['avg_rf']
+    #
+    #     bulls_rscs_heads = querysetBull.filter(somaticcellindexbull__rscs__isnull=False,
+    #                                            somaticcellindexbull__num_daug_est__gt=19).count()
+    #     bulls_rscs = querysetBull.filter(somaticcellindexbull__rscs__isnull=False,
+    #                                      somaticcellindexbull__num_daug_est__gt=19).aggregate(
+    #         avg_rscs=Avg('somaticcellindexbull__rscs')
+    #     )['avg_rscs']
+    #
+    #     # Коровы
+    #     querysetCow = PK.objects.filter(
+    #         datarojd__year=year,
+    #         milk__isnull=False
+    #     ).select_related(
+    #         'milk',
+    #         'milkproductionindex',
+    #         'reproductionindex',
+    #         'somaticcellindex',
+    #         'conformationindex'
+    #     )
+    #
+    #     cows_rm_heads = querysetCow.filter(milkproductionindex__rm__isnull=False).count()
+    #     cows_rm = querysetCow.filter(milkproductionindex__rm__isnull=False).aggregate(
+    #         avg_rm=Avg('milkproductionindex__rm')
+    #     )['avg_rm']
+    #
+    #     cows_rc_heads = querysetCow.filter(conformationindex__rc__isnull=False).count()
+    #     cows_rc = querysetCow.filter(conformationindex__rc__isnull=False).aggregate(
+    #         avg_rc=Avg('conformationindex__rc')
+    #     )['avg_rc']
+    #
+    #     cows_rf_heads = querysetCow.filter(reproductionindex__rf__isnull=False).count()
+    #     cows_rf = querysetCow.filter(reproductionindex__rf__isnull=False).aggregate(
+    #         avg_rf=Avg('reproductionindex__rf')
+    #     )['avg_rf']
+    #
+    #     cows_rscs_heads = querysetCow.filter(somaticcellindex__rscs__isnull=False).count()
+    #     cows_rscs = querysetCow.filter(somaticcellindex__rscs__isnull=False).aggregate(
+    #         avg_rscs=Avg('somaticcellindex__rscs')
+    #     )['avg_rscs']
+    #
+    #     # Словарь по году
+    #     result = {
+    #         'year': str(year),
+    #         'cows_rm': round(cows_rm) if cows_rm is not None else None,
+    #         'cows_rm_heads': cows_rm_heads if cows_rm_heads is not None else 0,
+    #         'cows_rc': round(cows_rc) if cows_rc is not None else None,
+    #         'cows_rc_heads': cows_rc_heads if cows_rc_heads is not None else 0,
+    #         'cows_rf': round(cows_rf) if cows_rf is not None else None,
+    #         'cows_rf_heads': cows_rf_heads if cows_rf_heads is not None else 0,
+    #         'cows_rscs': round(cows_rscs) if cows_rscs is not None else None,
+    #         'cows_rscs_heads': cows_rscs_heads if cows_rscs_heads is not None else 0,
+    #         'bulls_rm': round(bulls_rm) if bulls_rm is not None else None,
+    #         'bulls_rm_heads': bulls_rm_heads if bulls_rm_heads is not None else 0,
+    #         # 'bulls_rc': round(bulls_rc),
+    #         # 'bulls_rc_heads': bulls_rc_heads,
+    #         # 'bulls_rf': round(bulls_rf),
+    #         # 'bulls_rf_heads': bulls_rf_heads,
+    #         # 'bulls_rscs': round(bulls_rscs),
+    #         # 'bulls_rscs_heads': bulls_rscs_heads,
+    #     }
+    #
+    #     results.append(result)
+    #
+    # print(results)
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    # Пороговые значения
+
+    # def get_top_percent_threshold(model, field, top_percent):
+    #     values = (
+    #         model.objects
+    #         .filter(
+    #             **{f"{field}__gt": 0},
+    #
+    #         )
+    #         .values_list(field, flat=True)
+    #         .order_by(f"-{field}")
+    #     )
+    #     val_list = list(values)
+    #     if not val_list:
+    #         return None
+    #     cutoff_index = round(len(val_list) * (top_percent / 100)) - 1
+    #     return val_list[cutoff_index]
+    #
+    #
+    # def get_top_percent_with_daug_threshold(model, field, top_percent):
+    #     prefix = field.split('__')[0]
+    #
+    #     filters = {
+    #         f"{field}__gt": 0,
+    #
+    #     }
+    #
+    #     if prefix in ['milkproductionindexbull', 'reproductionindexbull', 'somaticcellindexbull',
+    #                   'conformationindexbull']:
+    #         filters[f"{prefix}__num_daug_est__gt"] = 19
+    #     values = (
+    #         model.objects
+    #         .filter(**filters)
+    #         .values_list(field, flat=True)
+    #         .order_by(f"-{field}")
+    #     )
+    #
+    #     val_list = list(values)
+    #     if not val_list:
+    #         return None
+    #
+    #     cutoff_index = round(len(val_list) * (top_percent / 100)) - 1
+    #     return val_list[cutoff_index]
+    #
+    #
+    #     # Список полей и названий индексов
+    # fields = {
+    #     'RM': 'milkproductionindexbull__rm',
+    #     'RC': 'conformationindexbull__rc',
+    #     'RF': 'reproductionindexbull__rf',
+    #     'RSCS': 'somaticcellindexbull__rscs',
+    #     'PI': 'complexindexbull__pi',
+    # }
+    #
+    # # Проценты от 5 до 50 с шагом 5
+    # percent_range = range(5, 51, 5)
+    #
+    # print("=== TOP % THRESHOLDS (без daug/herd) ===")
+    # for percent in percent_range:
+    #     print(f"\nTop {percent}%:")
+    #     for label, field in fields.items():
+    #         cutoff = get_top_percent_threshold(PKBull, field, percent)
+    #         print(f"  {label}: {cutoff}")
+    #
+    # print("\n=== TOP % THRESHOLDS (с num_daug_est и num_herd_est > 0) ===")
+    # for percent in percent_range:
+    #     print(f"\nTop {percent}%:")
+    #     for label, field in fields.items():
+    #         cutoff = get_top_percent_with_daug_threshold(PKBull, field, percent)
+    #         print(f"  {label}: {cutoff}")
+    # ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
